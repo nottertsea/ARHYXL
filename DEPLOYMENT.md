@@ -17,6 +17,8 @@ The backend supports both the existing local SQLite database (`arhyxl.sqlite`) a
 7. Create an account, add an item, open the cart, enter delivery details, and click `Pay Now`.
 8. Use Paystack test credentials from the Paystack dashboard. Never use a live key locally.
 
+If checkout reports that Paystack is unavailable, the backend is still using the placeholder key from `.env.example` or the variable is missing. Set `PAYSTACK_SECRET_KEY` in the backend service environment to the complete secret key from the Paystack dashboard, then restart or redeploy the backend. Do not put this key in frontend files or commit it to Git.
+
 Payment amounts are recalculated from the database product price in kobo. The frontend total is display-only.
 
 ## MySQL migration

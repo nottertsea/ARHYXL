@@ -11,7 +11,7 @@ const host = '0.0.0.0';
 const paystackSecretKey = (process.env.PAYSTACK_SECRET_KEY || '').trim();
 const frontendOrigin = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
 const paystackCallbackUrl = process.env.PAYSTACK_CALLBACK_URL || `${frontendOrigin}/confirmation.html`;
-const hasUsablePaystackSecret = paystackSecretKey.startsWith('sk_') && !paystackSecretKey.includes('replace_me');
+const hasUsablePaystackSecret = /^sk_(test|live)_[A-Za-z0-9]+$/.test(paystackSecretKey);
 
 const productSeed = [
     ['vans', 'Vans', 'Classic skate-inspired shoes with a timeless silhouette.', 35000, ['41', '42', '43', '44', '45', '46'], [['Classic', 'Vans.jpeg'], ['Black & White', 'vansblackandwhite.jpeg'], ['All Black', 'vansallblack.jpeg'], ['Blue & Black', 'vansblueandblack.jpeg'], ['Brown', 'vansbrown.jpeg'], ['Green', 'vansgreen.jpeg'], ['Red', 'vansred.jpeg'], ['Red & Black', 'vansredandblack.jpeg']]],
@@ -47,7 +47,7 @@ const requireUser = async (request, response, next) => {
     return next();
 };
 const paystackRequest = async (endpoint, options = {}) => {
-    if (!hasUsablePaystackSecret) throw new Error('Paystack is not configured with a valid secret key.');
+    if (!hasUsablePaystackSecret) throw new Error('Paystack is unavailable: set PAYSTACK_SECRET_KEY to a real sk_test_ or sk_live_ key on the backend.');
     console.log(`[Paystack] ${options.method || 'GET'} ${endpoint} (secret loaded: ${paystackSecretKey.length} chars)`);
     const result = await fetch(`https://api.paystack.co${endpoint}`, { ...options, headers: { Authorization: `Bearer ${paystackSecretKey}`, 'Content-Type': 'application/json' } });
     const data = await result.json();
