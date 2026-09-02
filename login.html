@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Login | arhyXL</title>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="index.html"><img src="Logo.jpeg" alt="arhyXL Logo"></a>
+        <nav class="main-nav">
+            <a href="index.html">Home</a>
+            <a href="about.html">About</a>
+            <a href="shop.html">Shop</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+        <div class="header-actions">
+            <a class="btn btn-secondary" href="signup.html">Signup</a>
+            <a class="btn btn-outline" href="cart.html">Cart</a>
+        </div>
+    </header>
+
+    <main class="auth-shell">
+        <section class="auth-card">
+            <p class="eyebrow">Welcome back</p>
+            <h1>Log in to arhyXL</h1>
+            <p class="page-text">Access your account and continue shopping.</p>
+            <form id="login-form" class="auth-form">
+                <label for="login-email">Email address</label>
+                <input id="login-email" type="email" required autocomplete="email">
+                <label for="login-password">Password</label>
+                <input id="login-password" type="password" required autocomplete="current-password">
+                <button class="btn btn-primary" type="submit">Log in</button>
+                <p id="login-status" class="form-status" role="status"></p>
+            </form>
+            <p class="auth-switch">New to arhyXL? <a href="signup.html">Create an account</a></p>
+        </section>
+    </main>
+
+    <script src="api-client.js"></script>
+    <script>
+        const loginStatus = document.getElementById('login-status');
+        const nextPage = new URLSearchParams(window.location.search).get('next') || 'index.html';
+
+        if (getAuthToken()) {
+            apiRequest('/me').then((data) => {
+                loginStatus.textContent = `You are already logged in as ${data.user.name}.`;
+            }).catch(() => clearSession());
+        }
+
+        document.getElementById('login-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            loginStatus.textContent = 'Signing you in...';
+            try {
+                const data = await apiRequest('/auth/login', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        email: document.getElementById('login-email').value,
+                        password: document.getElementById('login-password').value
+                    })
+                });
+                saveSession(data);
+                window.location.href = nextPage;
+            } catch (error) {
+                loginStatus.textContent = error.message;
+            }
+        });
+    </script>
+</body>
+</html>

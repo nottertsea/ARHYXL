@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Sae iVe Tee | arhyXL</title>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="index.html">
+            <img src="Logo.jpeg" alt="arhyXL Logo">
+        </a>
+        <nav class="main-nav">
+            <a href="index.html">Home</a>
+            <a href="about.html">About</a>
+            <a href="shop.html" class="active">Shop</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+        <div class="header-actions">
+            <a class="btn btn-secondary" href="signup.html">Signup</a>
+            <a class="btn btn-outline" href="login.html">Login</a>
+        </div>
+    </header>
+
+    <main class="page-shell">
+        <section class="shop-hero">
+            <p class="eyebrow">Collection</p>
+            <h1>Sae iVe Tee</h1>
+            <p class="page-text">A standout graphic tee with effortless attitude and premium comfort.</p>
+            <a class="btn btn-primary" href="shop.html">Back to shop</a>
+        </section>
+
+        <section class="product-grid"><article class="product-card" data-product-id="saeive">
+            <img id="saeive-image" src="Saetee.jpeg" alt="Sae iVe tee">
+            <div class="product-info"><h3>Sae iVe Tee</h3><p>Soft heavyweight tee with bold graphics.</p><span class="price" id="saeive-price">₦15,000</span>
+                <div class="option-row single-select"><label><span>Variation</span><select class="product-variant" data-image-target="saeive-image" data-price-target="saeive-price"><option value="Saetee.jpeg" data-price="₦15,000">Sae iVe Graphic</option></select></label></div>
+                <a class="btn btn-outline product-pick" href="product.html?product=saeive&variant=Saetee.jpeg">Pick</a>
+            </div></article>
+        </section>
+    </main>
+    <script src="shop-selection.js"></script>
+    <script src="api-client.js"></script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Zip Up Hoodies | arhyXL</title>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="index.html">
+            <img src="Logo.jpeg" alt="arhyXL Logo">
+        </a>
+        <nav class="main-nav">
+            <a href="index.html">Home</a>
+            <a href="about.html">About</a>
+            <a href="shop.html" class="active">Shop</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+        <div class="header-actions">
+            <a class="btn btn-secondary" href="signup.html">Signup</a>
+            <a class="btn btn-outline" href="login.html">Login</a>
+        </div>
+    </header>
+
+    <main class="page-shell">
+        <section class="shop-hero">
+            <p class="eyebrow">Collection</p>
+            <h1>Zip Up Hoodies</h1>
+            <p class="page-text">Layering essentials with soft interiors and a streamlined silhouette.</p>
+            <a class="btn btn-primary" href="shop.html">Back to shop</a>
+        </section>
+
+        <section class="product-grid"><article class="product-card" data-product-id="hoodies">
+            <img id="hoodie-image" src="Zipuphoodie.jpeg" alt="Zip up hoodie">
+            <div class="product-info"><h3>Zip Up Hoodies</h3><p>Layering essentials with a soft interior.</p><span class="price" id="hoodie-price">₦25,000</span>
+                <div class="option-row single-select"><label><span>Variation</span><select class="product-variant" data-image-target="hoodie-image" data-price-target="hoodie-price"><option value="Zipuphoodie.jpeg" data-price="₦25,000">Classic</option></select></label></div>
+                <a class="btn btn-outline product-pick" href="product.html?product=hoodies&variant=Zipuphoodie.jpeg">Pick</a>
+            </div></article>
+        </section>
+    </main>
+    <script src="shop-selection.js"></script>
+    <script src="api-client.js"></script>
+</body>
+</html>

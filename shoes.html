@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Shoes | arhyXL</title>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="index.html">
+            <img src="Logo.jpeg" alt="arhyXL Logo">
+        </a>
+        <nav class="main-nav">
+            <a href="index.html">Home</a>
+            <a href="about.html">About</a>
+            <a href="shop.html" class="active">Shop</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+        <div class="header-actions">
+            <a class="btn btn-secondary" href="signup.html">Signup</a>
+            <a class="btn btn-outline" href="login.html">Login</a>
+            <a class="btn btn-outline cart-link" href="cart.html">Cart <span class="cart-count" id="cart-count">0</span></a>
+        </div>
+    </header>
+
+    <main class="page-shell">
+        <section class="shop-hero">
+            <p class="eyebrow">Collection</p>
+            <h1>Shoes</h1>
+            <p class="page-text">A curated selection of iconic sneakers, including Vans, Air Max, and Speedcat styles.</p>
+            <a class="btn btn-primary" href="shop.html">Back to shop</a>
+        </section>
+
+        <section class="product-grid">
+            <article class="product-card vans-card" data-product-id="vans">
+                <img id="vans-image" src="Vans.jpeg" alt="Vans Old Skool">
+                <div class="product-info">
+                    <h3>Vans</h3>
+                    <p>Choose a Vans variation from the dropdown below to view the available colorway.</p>
+                    <span class="price" id="vans-price">₦35,000</span>
+                    <div class="option-row single-select">
+                        <label>
+                            <span>Variation</span>
+                            <select id="vans-variant" class="product-variant" data-image-target="vans-image" data-price-target="vans-price">
+                                <option value="vansblackandwhite.jpeg" data-price="₦35,000">Black & White</option>
+                                <option value="vansallblack.jpeg" data-price="₦35,000">All Black</option>
+                                <option value="vansblueandblack.jpeg" data-price="₦35,000">Blue & Black</option>
+                                <option value="vansbrown.jpeg" data-price="₦35,000">Brown</option>
+                                <option value="vansgreen.jpeg" data-price="₦35,000">Green</option>
+                                <option value="vansred.jpeg" data-price="₦35,000">Red</option>
+                                <option value="vansredandblack.jpeg" data-price="₦35,000">Red & Black</option>
+                            </select>
+                        </label>
+                    </div>
+                    <a class="btn btn-outline" href="#">Pick</a>
+                </div>
+            </article>
+            <article class="product-card airmax-card" data-product-id="airmax">
+                <img id="airmax-image" src="AirMax95.jpeg" alt="Nike Air Max 95">
+                <div class="product-info">
+                    <h3>Nike Air Max 95</h3>
+                    <p>Choose a colorway from the dropdown below to browse the available Air Max options.</p>
+                    <span class="price" id="airmax-price">₦38,000</span>
+                    <div class="option-row single-select">
+                        <label>
+                            <span>Color</span>
+                            <select id="airmax-variant" class="product-variant" data-image-target="airmax-image" data-price-target="airmax-price">
+                                <option value="AirMax95.jpeg" data-price="₦38,000">Black</option>
+                                <option value="airmax95green.jpeg" data-price="₦38,000">Green</option>
+                            </select>
+                        </label>
+                    </div>
+                    <a class="btn btn-outline" href="#">Pick</a>
+                </div>
+            </article>
+            <article class="product-card speedcat-card" data-product-id="speedcat">
+                <img id="speedcat-image" src="Speedcats.jpeg" alt="Puma Speedcat">
+                <div class="product-info">
+                    <h3>Puma Speedcat</h3>
+                    <p>Choose a Speedcat colorway from the dropdown below to view the available option.</p>
+                    <span class="price" id="speedcat-price">₦38,000</span>
+                    <div class="option-row single-select">
+                        <label>
+                            <span>Color</span>
+                            <select id="speedcat-variant" class="product-variant" data-image-target="speedcat-image" data-price-target="speedcat-price">
+                                <option value="Speedcats.jpeg" data-price="₦38,000">Black Speedcat</option>
+                                <option value="speedcatblackandwhite.jpeg" data-price="₦38,000">White & Black</option>
+                                <option value="speedcatpink.jpeg" data-price="₦38,000">Pink</option>
+                                <option value="speedcatsgreen.jpeg" data-price="₦38,000">Green</option>
+                                <option value="speedcatsred.jpeg" data-price="₦38,000">Red</option>
+                            </select>
+                        </label>
+                    </div>
+                    <a class="btn btn-outline" href="#">Pick</a>
+                </div>
+            </article>
+            <article class="product-card campus-card" data-product-id="campus">
+                <img id="campus-image" src="Campuses.jpeg" alt="Adidas Campus 80s">
+                <div class="product-info">
+                    <h3>Adidas Campus 80s</h3>
+                    <p>Choose a Campus colorway from the dropdown below to view the available option.</p>
+                    <span class="price" id="campus-price">₦33,000</span>
+                    <div class="option-row single-select">
+                        <label>
+                            <span>Color</span>
+                            <select id="campus-variant" class="product-variant" data-image-target="campus-image" data-price-target="campus-price">
+                                <option value="blackandwhitecampuses.jpeg" data-price="₦33,000">Black/White</option>
+                                <option value="blackcampuses.jpeg" data-price="₦33,000">Black</option>
+                                <option value="bluecampuses.jpeg" data-price="₦33,000">Blue</option>
+                                <option value="graycampuses.jpeg" data-price="₦33,000">Gray</option>
+                                <option value="greencampuses.jpeg" data-price="₦33,000">Green</option>
+                                <option value="pinkcampuses.jpeg" data-price="₦33,000">Pink</option>
+                                <option value="redcampuses.jpeg" data-price="₦33,000">Red</option>
+                            </select>
+                        </label>
+                    </div>
+                    <a class="btn btn-outline" href="#">Pick</a>
+                </div>
+            </article>
+            <article class="product-card samba-card" data-product-id="samba">
+                <img id="samba-image" src="Sambas.jpeg" alt="Adidas Samba OG">
+                <div class="product-info">
+                    <h3>Adidas Samba OG</h3>
+                    <p>Choose a Samba colorway from the dropdown below to view the available option.</p>
+                    <span class="price" id="samba-price">₦35,000</span>
+                    <div class="option-row single-select">
+                        <label>
+                            <span>Color</span>
+                            <select id="samba-variant" class="product-variant" data-image-target="samba-image" data-price-target="samba-price">
+                                <option value="blacksambas.jpeg" data-price="₦35,000">Black</option>
+                                <option value="whitesambas.jpeg" data-price="₦35,000">White</option>
+                            </select>
+                        </label>
+                    </div>
+                    <a class="btn btn-outline" href="#">Pick</a>
+                </div>
+            </article>
+            <article class="product-card force-card" data-product-id="airforce">
+                <img id="force-image" src="Forces.jpeg" alt="Nike Air Force 1 Low">
+                <div class="product-info">
+                    <h3>Nike Air Force 1 Low</h3>
+                    <p>Choose an Air Force 1 colorway from the dropdown below to view the available option.</p>
+                    <span class="price" id="force-price">₦35,000</span>
+                    <div class="option-row single-select">
+                        <label>
+                            <span>Color</span>
+                            <select id="force-variant" class="product-variant" data-image-target="force-image" data-price-target="force-price">
+                                <option value="blackairforces.jpeg" data-price="₦35,000">Black</option>
+                                <option value="whiteairforces.jpeg" data-price="₦35,000">White</option>
+                            </select>
+                        </label>
+                    </div>
+                    <a class="btn btn-outline" href="#">Pick</a>
+                </div>
+            </article>
+            <article class="product-card newbalance-card" data-product-id="newbalance">
+                <img id="newbalance-image" src="Newbalance9060.jpeg" alt="New Balance 9060">
+                <div class="product-info">
+                    <h3>New Balance 9060</h3>
+                    <p>Choose a New Balance colorway from the dropdown below to view the available option.</p>
+                    <span class="price" id="newbalance-price">₦40,000</span>
+                    <div class="option-row single-select">
+                        <label>
+                            <span>Color</span>
+                            <select id="newbalance-variant" class="product-variant" data-image-target="newbalance-image" data-price-target="newbalance-price">
+                                <option value="blacknbs.jpeg" data-price="₦40,000">Black</option>
+                                <option value="greennbs.jpeg" data-price="₦40,000">Green</option>
+                                <option value="brownnbs.jpeg" data-price="₦40,000">Brown</option>
+                                <option value="whitenbs.jpeg" data-price="₦40,000">White</option>
+                                <option value="graynbs.jpeg" data-price="₦40,000">Gray</option>
+                            </select>
+                        </label>
+                    </div>
+                    <a class="btn btn-outline" href="#">Pick</a>
+                </div>
+            </article>
+            <article class="product-card puma-suede-card" data-product-id="suede">
+                <img id="puma-suede-image" src="Pumasuade.jpeg" alt="Puma Suede XL">
+                <div class="product-info">
+                    <h3>Puma Suede XL</h3>
+                    <p>Choose a Puma Suede XL colorway from the dropdown below to view the available option.</p>
+                    <span class="price" id="puma-suede-price">₦40,000</span>
+                    <div class="option-row single-select">
+                        <label>
+                            <span>Color</span>
+                            <select id="puma-suede-variant" class="product-variant" data-image-target="puma-suede-image" data-price-target="puma-suede-price">
+                                <option value="Pumasuade.jpeg" data-price="₦40,000">Classic</option>
+                                <option value="jetblacksuede.jpeg" data-price="₦40,000">Jet Black</option>
+                                <option value="bluesuedexl.jpeg" data-price="₦40,000">Blue</option>
+                                <option value="greensuede.jpeg" data-price="₦40,000">Green</option>
+                                <option value="redsuede.jpeg" data-price="₦40,000">Red</option>
+                            </select>
+                        </label>
+                    </div>
+                    <a class="btn btn-outline" href="#">Pick</a>
+                </div>
+            </article>
+            <article class="product-card timberland-card" data-product-id="timberland">
+                <img id="timberland-image" src="blacktimbs.jpeg" alt="Timberland Boots">
+                <div class="product-info">
+                    <h3>Timberland Boots</h3>
+                    <p>Choose a Timberland colorway from the dropdown below to view the available option.</p>
+                    <span class="price" id="timberland-price">₦70,000</span>
+                    <div class="option-row single-select">
+                        <label>
+                            <span>Color</span>
+                            <select id="timberland-variant" class="product-variant" data-image-target="timberland-image" data-price-target="timberland-price">
+                                <option value="blacktimbs.jpeg" data-price="₦70,000">Black</option>
+                                <option value="Timberlandboots.jpeg" data-price="₦70,000">Classic</option>
+                            </select>
+                        </label>
+                    </div>
+                    <a class="btn btn-outline" href="#">Pick</a>
+                </div>
+            </article>
+            <article class="product-card drmartens-card">
+                <img id="drmartens-1461-image" src="1461docs.jpeg" alt="Dr. Martens 1461">
+                <div class="product-info">
+                    <h3>Dr. Martens 1461 8-Eye Boot</h3>
+                    <p>Choose a 1461 colorway from the dropdown below to view the available option.</p>
+                    <span class="price" id="drmartens-1461-price">₦55,000</span>
+                    <div class="option-row single-select">
+                        <label>
+                            <span>Color</span>
+                            <select id="drmartens-1461-variant" class="product-variant" data-image-target="drmartens-1461-image" data-price-target="drmartens-1461-price">
+                                <option value="1461docs.jpeg" data-price="₦55,000">Black</option>
+                            </select>
+                        </label>
+                    </div>
+                    <a class="btn btn-outline" href="#">Pick</a>
+                </div>
+            </article>
+            <article class="product-card drmartens-card">
+                <img id="drmartens-bex-image" src="Adrianbextasseldocs.jpeg" alt="Dr. Martens Bex Tassel">
+                <div class="product-info">
+                    <h3>Dr. Martens Bex Tassel 8-Eye Boot</h3>
+                    <p>Choose a Bex Tassel colorway from the dropdown below to view the available option.</p>
+                    <span class="price" id="drmartens-bex-price">₦55,000</span>
+                    <div class="option-row single-select">
+                        <label>
+                            <span>Color</span>
+                            <select id="drmartens-bex-variant" class="product-variant" data-image-target="drmartens-bex-image" data-price-target="drmartens-bex-price">
+                                <option value="Adrianbextasseldocs.jpeg" data-price="₦55,000">Black</option>
+                            </select>
+                        </label>
+                    </div>
+                    <a class="btn btn-outline" href="#">Pick</a>
+                </div>
+            </article>
+            <article class="product-card drmartens-card">
+                <img id="drmartens-8053-image" src="8053docs.jpeg" alt="Dr. Martens 8053">
+                <div class="product-info">
+                    <h3>Dr. Martens 8053 8-Eye Boot</h3>
+                    <p>Choose a 8053 colorway from the dropdown below to view the available option.</p>
+                    <span class="price" id="drmartens-8053-price">₦53,000</span>
+                    <div class="option-row single-select">
+                        <label>
+                            <span>Color</span>
+                            <select id="drmartens-8053-variant" class="product-variant" data-image-target="drmartens-8053-image" data-price-target="drmartens-8053-price">
+                                <option value="8053docs.jpeg" data-price="₦53,000">Black</option>
+                            </select>
+                        </label>
+                    </div>
+                    <a class="btn btn-outline" href="#">Pick</a>
+                </div>
+            </article>
+            <article class="product-card dior-card" data-product-id="dior">
+                <img id="dior-image" src="Diorb22.jpeg" alt="Christian Dior B22">
+                <div class="product-info">
+                    <h3>Christian Dior B22</h3>
+                    <p>Choose a Dior B22 colorway from the dropdown below to view the available option.</p>
+                    <span class="price" id="dior-price">₦38,000</span>
+                    <div class="option-row single-select">
+                        <label>
+                            <span>Color</span>
+                            <select id="dior-variant" class="product-variant" data-image-target="dior-image" data-price-target="dior-price">
+                                <option value="Diorb22black.jpeg" data-price="₦38,000">Black</option>
+                            </select>
+                        </label>
+                    </div>
+                    <a class="btn btn-outline" href="#">Pick</a>
+                </div>
+            </article>
+        </section>
+    </main>
+
+    <script src="api-client.js"></script>
+    <script>
+        const variantSelects = document.querySelectorAll('.product-variant');
+
+        function bindVariant(select) {
+            if (!select) return;
+
+            const image = document.getElementById(select.dataset.imageTarget);
+            const price = document.getElementById(select.dataset.priceTarget);
+            const card = select.closest('.product-card');
+            const pickButton = card?.querySelector('.btn-outline');
+
+            if (!image || !price) return;
+
+            const applyVariant = (selected) => {
+                const imagePath = selected.getAttribute('data-image') || selected.value;
+                const nextPrice = selected.getAttribute('data-price') || price.textContent;
+                const nextAlt = selected.textContent.trim();
+
+                image.style.opacity = '0.7';
+                const nextImage = new Image();
+                nextImage.onload = () => {
+                    image.src = imagePath;
+                    image.alt = nextAlt;
+                    price.textContent = nextPrice;
+                    image.style.opacity = '1';
+                };
+                nextImage.onerror = () => {
+                    image.src = imagePath;
+                    image.alt = nextAlt;
+                    price.textContent = nextPrice;
+                    image.style.opacity = '1';
+                };
+                nextImage.src = imagePath;
+
+                if (pickButton && card?.dataset.productId) {
+                    const nextVariant = encodeURIComponent(imagePath);
+                    pickButton.href = `product.html?product=${card.dataset.productId}&variant=${nextVariant}`;
+                }
+            };
+
+            select.addEventListener('change', () => {
+                applyVariant(select.options[select.selectedIndex]);
+            });
+
+            applyVariant(select.options[select.selectedIndex]);
+        }
+
+        variantSelects.forEach(bindVariant);
+
+        document.querySelectorAll('.product-card').forEach((card) => {
+            if (!card.querySelector('.availability-text')) {
+                const availability = document.createElement('p');
+                availability.className = 'availability-text';
+                availability.textContent = 'Available now';
+                const price = card.querySelector('.price');
+                if (price) {
+                    price.parentNode.insertBefore(availability, price);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

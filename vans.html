@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Vans | arhyXL</title>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="index.html">
+            <img src="Logo.jpeg" alt="arhyXL Logo">
+        </a>
+        <nav class="main-nav">
+            <a href="index.html">Home</a>
+            <a href="about.html">About</a>
+            <a href="shop.html" class="active">Shop</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+        <div class="header-actions">
+            <a class="btn btn-secondary" href="signup.html">Signup</a>
+            <a class="btn btn-outline" href="login.html">Login</a>
+        </div>
+    </header>
+
+    <main class="page-shell">
+        <section class="shop-hero">
+            <p class="eyebrow">Collection</p>
+            <h1>Vans</h1>
+            <p class="page-text">Classic skate-inspired pairs with timeless colorways and everyday comfort.</p>
+            <a class="btn btn-primary" href="shop.html">Back to shop</a>
+        </section>
+
+        <section class="product-grid"><article class="product-card" data-product-id="vans">
+            <img id="vans-collection-image" src="Vans.jpeg" alt="Vans classic">
+            <div class="product-info"><h3>Vans</h3><p>Classic skate-inspired pairs in timeless colorways.</p><span class="price" id="vans-collection-price">₦35,000</span>
+                <div class="option-row single-select"><label><span>Color</span><select class="product-variant" data-image-target="vans-collection-image" data-price-target="vans-collection-price"><option value="Vans.jpeg" data-price="₦35,000">Classic</option><option value="vansallblack.jpeg" data-price="₦35,000">All Black</option><option value="vansblackandwhite.jpeg" data-price="₦35,000">Black & White</option><option value="vansblueandblack.jpeg" data-price="₦35,000">Blue & Black</option><option value="vansbrown.jpeg" data-price="₦35,000">Brown</option><option value="vansgreen.jpeg" data-price="₦35,000">Green</option><option value="vansred.jpeg" data-price="₦35,000">Red</option><option value="vansredandblack.jpeg" data-price="₦35,000">Red & Black</option></select></label></div>
+                <a class="btn btn-outline product-pick" href="product.html?product=vans&variant=Vans.jpeg">Pick</a>
+            </div></article>
+        </section>
+    </main>
+    <script src="shop-selection.js"></script>
+    <script src="api-client.js"></script>
+</body>
+</html>

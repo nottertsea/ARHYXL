@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Order confirmation | arhyXL</title>
+</head>
+<body>
+    <header class="site-header"><a class="brand" href="index.html"><img src="Logo.jpeg" alt="arhyXL Logo"></a><nav class="main-nav"><a href="index.html">Home</a><a href="shop.html">Shop</a><a href="contact.html">Contact</a></nav><div class="header-actions"><a class="btn btn-outline" href="cart.html">Cart</a></div></header>
+    <main class="auth-shell"><section class="auth-card" id="confirmation-card"><p class="eyebrow">Payment status</p><h1>Checking your payment...</h1><p class="page-text">Please wait while we confirm your transaction.</p></section></main>
+    <script src="api-client.js"></script>
+    <script>
+        const card = document.getElementById('confirmation-card');
+        const reference = new URLSearchParams(window.location.search).get('reference') || new URLSearchParams(window.location.search).get('trxref');
+        const formatPrice = (kobo) => new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(kobo / 100);
+        const showResult = (order, success) => {
+            card.innerHTML = success
+                ? `<p class="eyebrow">Payment successful</p><h1>Thank you for your order.</h1><p class="page-text">Your order has been confirmed and your payment was received.</p><div class="confirmation-details"><p><strong>Order reference:</strong> ${order.order_reference}</p><p><strong>Amount paid:</strong> ${formatPrice(order.amount_paid_kobo)}</p><p><strong>Name:</strong> ${order.customer_name}</p><p><strong>Delivery address:</strong> ${order.delivery_address}</p></div><a class="btn btn-primary" href="shop.html">Continue shopping</a>`
+                : `<p class="eyebrow">Payment not completed</p><h1>We could not confirm payment.</h1><p class="page-text">Your order remains unpaid. You can return to your cart and try again.</p><a class="btn btn-outline" href="cart.html">Return to cart</a>`;
+        };
+        const verify = async () => {
+            if (!reference || !requireLogin()) return;
+            try { const data = await apiRequest(`/orders/${encodeURIComponent(reference)}/verify`); showResult(data.order, data.order?.payment_status === 'success'); if (data.order?.payment_status === 'success') sessionStorage.removeItem('arhyxl-checkout-key'); }
+            catch (error) { card.innerHTML = `<h1>Payment status unavailable</h1><p class="page-text">${error.message}</p><a class="btn btn-outline" href="cart.html">Return to cart</a>`; }
+        };
+        verify();
+    </script>
+</body>
+</html>

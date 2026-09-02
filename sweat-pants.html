@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Sweat Pants | arhyXL</title>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="index.html">
+            <img src="Logo.jpeg" alt="arhyXL Logo">
+        </a>
+        <nav class="main-nav">
+            <a href="index.html">Home</a>
+            <a href="about.html">About</a>
+            <a href="shop.html" class="active">Shop</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+        <div class="header-actions">
+            <a class="btn btn-secondary" href="signup.html">Signup</a>
+            <a class="btn btn-outline" href="login.html">Login</a>
+        </div>
+    </header>
+
+    <main class="page-shell">
+        <section class="shop-hero">
+            <p class="eyebrow">Collection</p>
+            <h1>Sweat Pants</h1>
+            <p class="page-text">Select a color below to view the available sweat pant options. Only the saved sweats images are shown.</p>
+            <a class="btn btn-primary" href="shop.html">Back to shop</a>
+        </section>
+
+        <section class="product-grid">
+            <article class="product-card" data-product-id="sweatpants">
+                <img id="sweatpants-image" src="graysweatsone.jpeg" alt="Ash sweat pants">
+                <div class="product-info">
+                    <h3>Sweat Pants</h3>
+                    <p>Soft, heavyweight essentials in every available colorway.</p>
+                    <span class="price" id="sweatpants-price">₦20,000</span>
+                    <div class="option-row single-select"><label><span>Variation</span>
+                        <select class="product-variant" data-image-target="sweatpants-image" data-price-target="sweatpants-price">
+                            <option value="graysweatsone.jpeg" data-price="₦20,000">Ash</option>
+                            <option value="graysweatsthree.jpeg" data-price="₦20,000">Ash Three</option>
+                            <option value="graysweatsfour.jpeg" data-price="₦20,000">Ash Four</option>
+                            <option value="graysweatsfive.jpeg" data-price="₦20,000">Ash Five</option>
+                            <option value="blacksweatsone.jpeg" data-price="₦20,000">Black</option>
+                            <option value="pinksweatsone.jpeg" data-price="₦20,000">Light Pink</option>
+                            <option value="brownsweatsone.jpeg" data-price="₦20,000">Brown</option>
+                            <option value="grayandblacksweatsone.jpeg" data-price="₦20,000">Gray and Black</option>
+                            <option value="sweatsone.jpeg" data-price="₦20,000">Classic</option>
+                            <option value="allsweats.jpeg" data-price="₦20,000">All Black</option>
+                        </select>
+                    </label></div>
+                    <a class="btn btn-outline product-pick" href="product.html?product=sweatpants&variant=graysweatsone.jpeg">Pick</a>
+                </div>
+            </article>
+        </section>
+    </main>
+
+    <script src="shop-selection.js"></script>
+    <script src="api-client.js"></script>
+</body>
+</html>

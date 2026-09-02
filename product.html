@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Product Details | arhyXL</title>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="index.html">
+            <img src="Logo.jpeg" alt="arhyXL Logo">
+        </a>
+        <nav class="main-nav">
+            <a href="index.html">Home</a>
+            <a href="about.html">About</a>
+            <a href="shop.html">Shop</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+        <div class="header-actions">
+            <a class="btn btn-outline cart-link" href="cart.html">Cart <span class="cart-count" id="cart-count">0</span></a>
+            <a class="btn btn-outline" href="login.html">Login</a>
+        </div>
+    </header>
+
+    <main class="page-shell">
+        <section class="product-detail-grid">
+            <div class="product-detail-media">
+                <img id="detail-image" src="" alt="Selected shoe">
+            </div>
+            <div class="product-detail-copy">
+                <p class="eyebrow">Selected product</p>
+                <h1 id="detail-title">Product</h1>
+                <p id="detail-price" class="price">₦0</p>
+                <p id="detail-description" class="page-text"></p>
+                <p class="availability-text">Available now</p>
+
+                <div class="picker-wrap">
+                    <label for="detail-color">Colorway</label>
+                    <select id="detail-color"></select>
+                </div>
+
+                <div class="picker-wrap">
+                    <label for="detail-size">Size</label>
+                    <select id="detail-size"></select>
+                </div>
+
+                <div class="picker-wrap">
+                    <label for="detail-quantity">Quantity</label>
+                    <select id="detail-quantity">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                    </select>
+                </div>
+
+                <div class="picker-wrap">
+                    <label for="detail-note">Note</label>
+                    <textarea id="detail-note" rows="4" placeholder="Add a note for this product"></textarea>
+                </div>
+
+                <div class="picker-wrap">
+                    <span class="picker-label">Rating</span>
+                    <div class="star-rating" id="detail-rating" role="radiogroup" aria-label="Rate this product">
+                        <button type="button" class="rating-star" data-rating="1" role="radio" aria-label="1 star" aria-checked="false">&#9733;</button>
+                        <button type="button" class="rating-star" data-rating="2" role="radio" aria-label="2 stars" aria-checked="false">&#9733;</button>
+                        <button type="button" class="rating-star" data-rating="3" role="radio" aria-label="3 stars" aria-checked="false">&#9733;</button>
+                        <button type="button" class="rating-star" data-rating="4" role="radio" aria-label="4 stars" aria-checked="false">&#9733;</button>
+                        <button type="button" class="rating-star" data-rating="5" role="radio" aria-label="5 stars" aria-checked="false">&#9733;</button>
+                    </div>
+                </div>
+
+                <div class="product-actions">
+                    <button class="btn btn-primary" id="add-to-cart">Add to cart</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="api-client.js"></script>
+    <script>
+        const products = {
+            vans: {
+                title: 'Vans',
+                description: 'Classic skate-inspired shoes with a timeless silhouette and durable construction.',
+                price: '₦35,000',
+                sizes: ['41','42','43','44','45','46'],
+                options: [
+                    { label: 'Classic', value: 'Vans.jpeg', price: '₦35,000' },
+                    { label: 'Black & White', value: 'vansblackandwhite.jpeg', price: '₦35,000' },
+                    { label: 'All Black', value: 'vansallblack.jpeg', price: '₦35,000' },
+                    { label: 'Blue & Black', value: 'vansblueandblack.jpeg', price: '₦35,000' },
+                    { label: 'Brown', value: 'vansbrown.jpeg', price: '₦35,000' },
+                    { label: 'Green', value: 'vansgreen.jpeg', price: '₦35,000' },
+                    { label: 'Red', value: 'vansred.jpeg', price: '₦35,000' },
+                    { label: 'Red & Black', value: 'vansredandblack.jpeg', price: '₦35,000' }
+                ]
+            },
+            airmax: {
+                title: 'Nike Air Max 95',
+                description: 'A bold Air Max silhouette with cushioned comfort and modern streetwear energy.',
+                price: '₦38,000',
+                sizes: ['38','39','40','41','42','43','44','45','46'],
+                options: [
+                    { label: 'Black', value: 'AirMax95.jpeg', price: '₦38,000' },
+                    { label: 'Green', value: 'airmax95green.jpeg', price: '₦38,000' }
+                ]
+            },
+            speedcat: {
+                title: 'Puma Speedcat',
+                description: 'A lightweight racing-inspired sneaker with a sleek profile and premium finish.',
+                price: '₦38,000',
+                sizes: ['38','39','40','41','42','43','44','45','46'],
+                options: [
+                    { label: 'Black Speedcat', value: 'Speedcats.jpeg', price: '₦38,000' },
+                    { label: 'White & Black', value: 'speedcatblackandwhite.jpeg', price: '₦38,000' },
+                    { label: 'Pink', value: 'speedcatpink.jpeg', price: '₦38,000' },
+                    { label: 'Green', value: 'speedcatsgreen.jpeg', price: '₦38,000' },
+                    { label: 'Red', value: 'speedcatsred.jpeg', price: '₦38,000' }
+                ]
+            },
+            campus: {
+                title: 'Adidas Campus 80s',
+                description: 'An iconic retro basketball-inspired sneaker with a relaxed, everyday appeal.',
+                price: '₦33,000',
+                sizes: ['38','39','40','41','42','43','44','45','46'],
+                options: [
+                    { label: 'Black/White', value: 'blackandwhitecampuses.jpeg', price: '₦33,000' },
+                    { label: 'Black', value: 'blackcampuses.jpeg', price: '₦33,000' },
+                    { label: 'Blue', value: 'bluecampuses.jpeg', price: '₦33,000' },
+                    { label: 'Gray', value: 'graycampuses.jpeg', price: '₦33,000' },
+                    { label: 'Green', value: 'greencampuses.jpeg', price: '₦33,000' },
+                    { label: 'Pink', value: 'pinkcampuses.jpeg', price: '₦33,000' },
+                    { label: 'Red', value: 'redcampuses.jpeg', price: '₦33,000' }
+                ]
+            },
+            samba: {
+                title: 'Adidas Samba OG',
+                description: 'A heritage football-inspired sneaker with a clean, classic look.',
+                price: '₦35,000',
+                sizes: ['41','42','43','44','45','46'],
+                options: [
+                    { label: 'Black', value: 'blacksambas.jpeg', price: '₦35,000' },
+                    { label: 'White', value: 'whitesambas.jpeg', price: '₦35,000' }
+                ]
+            },
+            airforce: {
+                title: 'Nike Air Force 1 Low',
+                description: 'A timeless low-top basketball sneaker with premium comfort and versatility.',
+                price: '₦35,000',
+                sizes: ['38','39','40','41','42','43','44','45','46','47','48','49','50','51','52','53','54','55','56'],
+                options: [
+                    { label: 'Black', value: 'blackairforces.jpeg', price: '₦35,000' },
+                    { label: 'White', value: 'whiteairforces.jpeg', price: '₦35,000' }
+                ]
+            },
+            newbalance: {
+                title: 'New Balance 9060',
+                description: 'An elevated lifestyle sneaker designed with sleek lines and modern comfort.',
+                price: '₦40,000',
+                sizes: ['38','39','40','41','42','43','44','45','46'],
+                options: [
+                    { label: 'Black', value: 'blacknbs.jpeg', price: '₦40,000' },
+                    { label: 'Green', value: 'greennbs.jpeg', price: '₦40,000' },
+                    { label: 'Brown', value: 'brownnbs.jpeg', price: '₦40,000' },
+                    { label: 'White', value: 'whitenbs.jpeg', price: '₦40,000' },
+                    { label: 'Gray', value: 'graynbs.jpeg', price: '₦40,000' }
+                ]
+            },
+            suede: {
+                title: 'Puma Suede XL',
+                description: 'A chunky suede staple with a bold silhouette and street-ready feel.',
+                price: '₦40,000',
+                sizes: ['41','42','43','44','45','46'],
+                options: [
+                    { label: 'Classic', value: 'Pumasuade.jpeg', price: '₦40,000' },
+                    { label: 'Jet Black', value: 'jetblacksuede.jpeg', price: '₦40,000' },
+                    { label: 'Blue', value: 'bluesuedexl.jpeg', price: '₦40,000' },
+                    { label: 'Green', value: 'greensuede.jpeg', price: '₦40,000' },
+                    { label: 'Red', value: 'redsuede.jpeg', price: '₦40,000' }
+            ]
+            },
+            timberland: {
+                title: 'Timberland Boots',
+                description: 'Durable weather-ready boots built for comfort, grip, and everyday wear.',
+                price: '₦70,000',
+                sizes: ['41','42','43','44','45','46'],
+                options: [
+                    { label: 'Black', value: 'blacktimbs.jpeg', price: '₦70,000' },
+                    { label: 'Classic', value: 'Timberlandboots.jpeg', price: '₦70,000' }
+                ]
+            },
+            'drmartens-1461': {
+                title: 'Dr. Martens 1461 8-Eye Boot',
+                description: 'The iconic 1461 boot with durable leather, polished detailing, and lasting comfort.',
+                price: '₦55,000',
+                sizes: ['42','43','44','45','46'],
+                options: [
+                    { label: 'Black', value: '1461docs.jpeg', price: '₦55,000' }
+                ]
+            },
+            'drmartens-bex': {
+                title: 'Dr. Martens Bex Tassel 8-Eye Boot',
+                description: 'A refined tassel-detail boot with the signature Dr. Martens edge.',
+                price: '₦55,000',
+                sizes: ['42','43','44','45','46'],
+                options: [
+                    { label: 'Black', value: 'Adrianbextasseldocs.jpeg', price: '₦55,000' }
+                ]
+            },
+            'drmartens-8053': {
+                title: 'Dr. Martens 8053 8-Eye Boot',
+                description: 'A classic 8053 silhouette with robust construction and premium leather finish.',
+                price: '₦53,000',
+                sizes: ['42','43','44','45','46'],
+                options: [
+                    { label: 'Black', value: '8053docs.jpeg', price: '₦53,000' }
+                ]
+            },
+            dior: {
+                title: 'Christian Dior B22',
+                description: 'A luxury streetwear sneaker with sculpted styling and premium detailing.',
+                price: '₦38,000',
+                sizes: ['38','39','40','41','42','43','44','45','46'],
+                options: [
+                    { label: 'Black', value: 'Diorb22black.jpeg', price: '₦38,000' }
+                ]
+            },
+            plainshirts: {
+                title: 'Plain Shirt',
+                description: 'Clean, versatile tees in easy everyday colorways.',
+                price: '₦11,000',
+                sizes: ['S', 'M', 'L', 'XL', 'XXL'],
+                options: [
+                    { label: 'Black', value: 'blackplaintee.jpeg', price: '₦11,000' },
+                    { label: 'Brown', value: 'brownplaintee.jpeg', price: '₦11,000' },
+                    { label: 'Green', value: 'greenplaintee.jpeg', price: '₦11,000' },
+                    { label: 'Navy Blue', value: 'navyblueplaintee.jpeg', price: '₦11,000' }
+                ]
+            },
+            sweatshorts: {
+                title: 'Sweat Shorts',
+                description: 'Relaxed lounge shorts made for comfort and movement.',
+                price: '₦15,000',
+                sizes: ['S', 'M', 'L', 'XL', 'XXL'],
+                options: [
+                    { label: 'Classic', value: 'shorts.jpeg', price: '₦15,000' },
+                    { label: 'Utility', value: 'shorts.jpeg', price: '₦15,000' }
+                ]
+            },
+            sweatpants: {
+                title: 'Sweat Pants',
+                description: 'Soft, heavyweight essentials for easy layering and off-duty style.',
+                price: '₦20,000',
+                sizes: ['S', 'M', 'L', 'XL', 'XXL'],
+                options: [
+                    { label: 'Ash', value: 'graysweatsone.jpeg', price: '₦20,000' },
+                    { label: 'Ash Three', value: 'graysweatsthree.jpeg', price: '₦20,000' },
+                    { label: 'Ash Four', value: 'graysweatsfour.jpeg', price: '₦20,000' },
+                    { label: 'Ash Five', value: 'graysweatsfive.jpeg', price: '₦20,000' },
+                    { label: 'Black', value: 'blacksweatsone.jpeg', price: '₦20,000' },
+                    { label: 'Light Pink', value: 'pinksweatsone.jpeg', price: '₦20,000' },
+                    { label: 'Brown', value: 'brownsweatsone.jpeg', price: '₦20,000' },
+                    { label: 'Gray and Black', value: 'grayandblacksweatsone.jpeg', price: '₦20,000' },
+                    { label: 'Classic', value: 'sweatsone.jpeg', price: '₦20,000' },
+                    { label: 'All Black', value: 'allsweats.jpeg', price: '₦20,000' }
+                ]
+            },
+            hoodies: {
+                title: 'Zip Up Hoodie',
+                description: 'Layering essentials with soft interiors and a streamlined silhouette.',
+                price: '₦25,000',
+                sizes: ['S', 'M', 'L', 'XL', 'XXL'],
+                options: [
+                    { label: 'Classic', value: 'Zipuphoodie.jpeg', price: '₦25,000' }
+                ]
+            },
+            saeive: {
+                title: 'Sae iVe Tee',
+                description: 'A standout graphic tee with effortless attitude and premium comfort.',
+                price: '₦15,000',
+                sizes: ['S', 'M', 'L', 'XL', 'XXL'],
+                options: [
+                    { label: 'Sae iVe Graphic', value: 'Saetee.jpeg', price: '₦15,000' }
+                ]
+            }
+        };
+
+        const params = new URLSearchParams(window.location.search);
+        const productId = params.get('product');
+        const selectedVariant = params.get('variant');
+
+        const product = products[productId];
+        if (!product) {
+            document.querySelector('.product-detail-copy').innerHTML = '<h1>Product not found</h1>';
+        } else {
+            document.getElementById('detail-title').textContent = product.title;
+            document.getElementById('detail-price').textContent = product.price;
+            document.getElementById('detail-description').textContent = product.description;
+
+            const colorSelect = document.getElementById('detail-color');
+            const sizeSelect = document.getElementById('detail-size');
+            const image = document.getElementById('detail-image');
+            const ratingStars = document.querySelectorAll('.rating-star');
+            let selectedRating = 0;
+
+            const updateRating = (rating) => {
+                selectedRating = rating;
+                ratingStars.forEach((star) => {
+                    const isSelected = Number(star.dataset.rating) <= rating;
+                    star.classList.toggle('selected', isSelected);
+                    star.setAttribute('aria-checked', String(Number(star.dataset.rating) === rating));
+                });
+            };
+
+            ratingStars.forEach((star) => {
+                star.addEventListener('click', () => updateRating(Number(star.dataset.rating)));
+            });
+
+            product.options.forEach((option) => {
+                const optionEl = document.createElement('option');
+                optionEl.value = option.value;
+                optionEl.textContent = option.label;
+                colorSelect.appendChild(optionEl);
+            });
+
+            product.sizes.forEach((size) => {
+                const sizeEl = document.createElement('option');
+                sizeEl.value = size;
+                sizeEl.textContent = size;
+                sizeSelect.appendChild(sizeEl);
+            });
+
+            const initialIndex = product.options.findIndex((option) => selectedVariant && decodeURIComponent(selectedVariant) === option.value);
+            const initialOption = initialIndex >= 0 ? product.options[initialIndex] : product.options[0];
+            colorSelect.value = initialOption.value;
+            image.src = initialOption.value;
+            image.alt = initialOption.label;
+
+            colorSelect.addEventListener('change', () => {
+                const nextOption = product.options.find((option) => option.value === colorSelect.value);
+                if (nextOption) {
+                    image.src = nextOption.value;
+                    image.alt = nextOption.label;
+                    document.getElementById('detail-price').textContent = nextOption.price;
+                }
+            });
+
+            document.getElementById('add-to-cart').addEventListener('click', async () => {
+                if (!requireLogin()) return;
+                const quantity = parseInt(document.getElementById('detail-quantity').value, 10) || 1;
+                try {
+                    await apiRequest('/cart', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            productId,
+                            variant: colorSelect.value,
+                            size: sizeSelect.value,
+                            note: document.getElementById('detail-note').value,
+                            rating: selectedRating,
+                            quantity
+                        })
+                    });
+                    window.location.href = 'cart.html';
+                } catch (error) {
+                    alert(error.message);
+                }
+            });
+        }
+    </script>
+</body>
+</html>

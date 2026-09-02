@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Shirts | arhyXL</title>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="index.html">
+            <img src="Logo.jpeg" alt="arhyXL Logo">
+        </a>
+        <nav class="main-nav">
+            <a href="index.html">Home</a>
+            <a href="about.html">About</a>
+            <a href="shop.html" class="active">Shop</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+        <div class="header-actions">
+            <a class="btn btn-secondary" href="signup.html">Signup</a>
+            <a class="btn btn-outline" href="login.html">Login</a>
+        </div>
+    </header>
+
+    <main class="page-shell">
+        <section class="shop-hero">
+            <p class="eyebrow">Collection</p>
+            <h1>Shirts</h1>
+            <p class="page-text">Clean silhouettes and polished everyday staples designed to move from streetwear to sharp casual.</p>
+            <a class="btn btn-primary" href="shop.html">Back to shop</a>
+        </section>
+
+        <section class="product-grid">
+            <article class="product-card" data-product-id="plainshirts">
+                <img id="plain-shirt-image" src="blackplaintee.jpeg" alt="Plain shirt in black">
+                <div class="product-info">
+                    <h3>Plain Shirts</h3>
+                    <p>Clean everyday tees in a range of simple colorways.</p>
+                    <span class="price" id="plain-shirt-price">₦11,000</span>
+                    <div class="option-row single-select">
+                        <label><span>Color</span>
+                            <select class="product-variant" data-image-target="plain-shirt-image" data-price-target="plain-shirt-price">
+                                <option value="blackplaintee.jpeg" data-price="₦11,000">Black</option>
+                                <option value="brownplaintee.jpeg" data-price="₦11,000">Brown</option>
+                                <option value="greenplaintee.jpeg" data-price="₦11,000">Green</option>
+                                <option value="navyblueplaintee.jpeg" data-price="₦11,000">Navy Blue</option>
+                            </select>
+                        </label>
+                    </div>
+                    <a class="btn btn-outline" href="product.html?product=plainshirts&variant=blackplaintee.jpeg">Pick</a>
+                </div>
+            </article>
+        </section>
+    </main>
+    <script src="shop-selection.js"></script>
+    <script src="api-client.js"></script>
+</body>
+</html>

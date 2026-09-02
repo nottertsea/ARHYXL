@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Speedcats | arhyXL</title>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="index.html">
+            <img src="Logo.jpeg" alt="arhyXL Logo">
+        </a>
+        <nav class="main-nav">
+            <a href="index.html">Home</a>
+            <a href="about.html">About</a>
+            <a href="shop.html" class="active">Shop</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+        <div class="header-actions">
+            <a class="btn btn-secondary" href="signup.html">Signup</a>
+            <a class="btn btn-outline" href="login.html">Login</a>
+        </div>
+    </header>
+
+    <main class="page-shell">
+        <section class="shop-hero">
+            <p class="eyebrow">Collection</p>
+            <h1>Speedcats</h1>
+            <p class="page-text">Performance-inspired sneakers with sharp lines and statement colorways.</p>
+            <a class="btn btn-primary" href="shop.html">Back to shop</a>
+        </section>
+
+        <section class="product-grid"><article class="product-card" data-product-id="speedcat">
+            <img id="speedcat-collection-image" src="Speedcats.jpeg" alt="Speedcats classic">
+            <div class="product-info"><h3>Puma Speedcat</h3><p>Performance-inspired styling with sharp lines.</p><span class="price" id="speedcat-collection-price">₦38,000</span>
+                <div class="option-row single-select"><label><span>Color</span><select class="product-variant" data-image-target="speedcat-collection-image" data-price-target="speedcat-collection-price"><option value="Speedcats.jpeg" data-price="₦38,000">Classic</option><option value="speedcatblackandwhite.jpeg" data-price="₦38,000">Black & White</option><option value="speedcatpink.jpeg" data-price="₦38,000">Pink</option><option value="speedcatsgreen.jpeg" data-price="₦38,000">Green</option><option value="speedcatsred.jpeg" data-price="₦38,000">Red</option></select></label></div>
+                <a class="btn btn-outline product-pick" href="product.html?product=speedcat&variant=Speedcats.jpeg">Pick</a>
+            </div></article>
+        </section>
+    </main>
+    <script src="shop-selection.js"></script>
+    <script src="api-client.js"></script>
+</body>
+</html>

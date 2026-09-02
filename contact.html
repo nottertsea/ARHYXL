@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Contact | arhyXL</title>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="index.html">
+            <img src="Logo.jpeg" alt="arhyXL Logo">
+        </a>
+        <nav class="main-nav">
+            <a href="index.html">Home</a>
+            <a href="about.html">About</a>
+            <a href="shop.html">Shop</a>
+            <a href="contact.html" class="active">Contact</a>
+        </nav>
+        <div class="header-actions">
+            <a class="btn btn-secondary" href="signup.html">Signup</a>
+            <a class="btn btn-outline" href="login.html">Login</a>
+            <a class="btn btn-outline" href="cart.html">Cart</a>
+        </div>
+    </header>
+
+    <main class="page-shell contact-page">
+        <section class="contact-intro">
+            <p class="eyebrow">Contact</p>
+            <h1>We’re here to help.</h1>
+            <p class="page-text">Speak with our assistant or send your complaint directly to the arhyXL team.</p>
+            <a class="contact-phone" href="tel:09047315988">09047315988</a>
+        </section>
+
+        <section class="contact-grid">
+            <article class="contact-panel complaint-panel">
+                <p class="eyebrow">Complaints</p>
+                <h2>Tell us what happened</h2>
+                <form id="complaint-form">
+                    <label for="complaint-name">Your name</label>
+                    <input id="complaint-name" name="name" type="text" required>
+
+                    <label for="complaint-email">Email address</label>
+                    <input id="complaint-email" name="email" type="email" required>
+
+                    <label for="complaint-subject">Subject</label>
+                    <input id="complaint-subject" name="subject" type="text" required>
+
+                    <label for="complaint-message">Complaint</label>
+                    <textarea id="complaint-message" name="message" rows="7" required></textarea>
+
+                    <button class="btn btn-primary" type="submit">Send complaint</button>
+                    <p id="complaint-status" class="form-status" role="status"></p>
+                </form>
+            </article>
+
+            <article class="contact-panel assistant-panel">
+                <div class="assistant-heading">
+                    <div>
+                        <p class="eyebrow">arhyXL assistant</p>
+                        <h2>How can we help?</h2>
+                    </div>
+                    <span class="assistant-status">Online</span>
+                </div>
+                <div id="assistant-messages" class="assistant-messages" aria-live="polite">
+                    <p class="assistant-message assistant-reply">Hi, I’m the arhyXL assistant. Ask about orders, sizing, delivery, or complaints.</p>
+                </div>
+                <div class="assistant-prompts">
+                    <button type="button" class="quick-prompt">Where is my order?</button>
+                    <button type="button" class="quick-prompt">I want to make a complaint</button>
+                    <button type="button" class="quick-prompt">How do I choose a size?</button>
+                </div>
+                <form id="assistant-form" class="assistant-form">
+                    <label class="sr-only" for="assistant-input">Message the arhyXL assistant</label>
+                    <input id="assistant-input" type="text" placeholder="Write a message" autocomplete="off" required>
+                    <button class="btn btn-primary" type="submit">Send</button>
+                </form>
+            </article>
+        </section>
+    </main>
+
+    <script src="api-client.js"></script>
+    <script>
+        const complaintForm = document.getElementById('complaint-form');
+        const complaintStatus = document.getElementById('complaint-status');
+        const assistantForm = document.getElementById('assistant-form');
+        const assistantInput = document.getElementById('assistant-input');
+        const assistantMessages = document.getElementById('assistant-messages');
+
+        complaintForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            complaintStatus.textContent = 'Sending...';
+            try {
+                await apiRequest('/complaints', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        name: complaintForm.elements.name.value,
+                        email: complaintForm.elements.email.value,
+                        subject: complaintForm.elements.subject.value,
+                        message: complaintForm.elements.message.value
+                    })
+                });
+                complaintStatus.textContent = 'Your complaint has been received.';
+                complaintForm.reset();
+            } catch (error) {
+                complaintStatus.textContent = error.message;
+            }
+        });
+
+        const assistantReply = (message) => {
+            const lowerMessage = message.toLowerCase();
+            if (lowerMessage.includes('complaint')) {
+                return 'You can send a complaint using the form beside this chat. For urgent help, call 09047315988.';
+            }
+            if (lowerMessage.includes('size')) {
+                return 'Open a product with Pick to see the available sizes before adding it to your cart.';
+            }
+            if (lowerMessage.includes('order')) {
+                return 'Please call 09047315988 with your order details so the team can check its status.';
+            }
+            if (lowerMessage.includes('delivery')) {
+                return 'For delivery questions, call 09047315988 and the team will help you directly.';
+            }
+            return 'Thanks for reaching out. Call 09047315988 or send a complaint using the form beside this chat.';
+        };
+
+        const addMessage = (message, type) => {
+            const messageElement = document.createElement('p');
+            messageElement.className = `assistant-message ${type}`;
+            messageElement.textContent = message;
+            assistantMessages.appendChild(messageElement);
+            assistantMessages.scrollTop = assistantMessages.scrollHeight;
+        };
+
+        const sendAssistantMessage = async (message) => {
+            const cleanMessage = message.trim();
+            if (!cleanMessage) {
+                return;
+            }
+            addMessage(cleanMessage, 'assistant-user');
+            try {
+                const data = await apiRequest('/assistant', {
+                    method: 'POST',
+                    body: JSON.stringify({ message: cleanMessage })
+                });
+                addMessage(data.reply, 'assistant-reply');
+            } catch (error) {
+                addMessage(assistantReply(cleanMessage), 'assistant-reply');
+            }
+        };
+
+        assistantForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            sendAssistantMessage(assistantInput.value);
+            assistantInput.value = '';
+        });
+
+        document.querySelectorAll('.quick-prompt').forEach((prompt) => {
+            prompt.addEventListener('click', () => sendAssistantMessage(prompt.textContent));
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">   
+    <title>Home|arhyXL. the #1 plug</title>
+</head>
+<body>
+   <header class="site-header">
+        <a class="brand" href="index.html">
+            <img src="Logo.jpeg" alt="arhyXL Logo">
+        </a>
+        <nav class="main-nav">
+            <a href="index.html" class="active">Home</a>
+            <a href="about.html">About</a>
+            <a href="shop.html">Shop</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+        <div class="header-actions">
+            <a class="btn btn-secondary" href="signup.html">Signup</a>
+            <a class="btn btn-outline" href="login.html">Login</a>
+            <a class="btn btn-outline cart-link" href="cart.html">Cart <span class="cart-count" id="cart-count">0</span></a>
+        </div>
+    </header>
+
+    <main class="hero">
+        <div class="hero-media">
+            <img src="modes.jpeg" alt="Model">
+        </div>
+        <div class="hero-copy">
+            <p class="eyebrow">New, Simple, Inventive   </p>
+            <p class="welcome-message" id="welcome-message" hidden>Welcome back, <span id="home-user-name"></span>!</p>
+            <h1>    Less Noise. More Presence.</h1>
+            <p class="hero-text">Every collection is an invitation to embrace restraint. Thoughtfully designed essentials that move effortlessly between moments, seasons, and identities.</p>
+            <a class="btn btn-primary" href="shop.html">Place Order →</a>
+        </div>
+    </main>
+
+    <script src="api-client.js"></script>
+</body>
+</html>

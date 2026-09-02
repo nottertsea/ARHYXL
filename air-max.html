@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Air Max | arhyXL</title>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="index.html">
+            <img src="Logo.jpeg" alt="arhyXL Logo">
+        </a>
+        <nav class="main-nav">
+            <a href="index.html">Home</a>
+            <a href="about.html">About</a>
+            <a href="shop.html" class="active">Shop</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+        <div class="header-actions">
+            <a class="btn btn-secondary" href="signup.html">Signup</a>
+            <a class="btn btn-outline" href="login.html">Login</a>
+        </div>
+    </header>
+
+    <main class="page-shell">
+        <section class="shop-hero">
+            <p class="eyebrow">Collection</p>
+            <h1>Air Max</h1>
+            <p class="page-text">Air Max silhouettes with cushioned comfort and a sleek street-ready profile.</p>
+            <a class="btn btn-primary" href="shop.html">Back to shop</a>
+        </section>
+
+        <section class="product-grid"><article class="product-card" data-product-id="airmax">
+            <img id="airmax-collection-image" src="AirMax95.jpeg" alt="Air Max 95">
+            <div class="product-info"><h3>Nike Air Max 95</h3><p>Iconic comfort with a layered, sculpted profile.</p><span class="price" id="airmax-collection-price">₦38,000</span>
+                <div class="option-row single-select"><label><span>Color</span><select class="product-variant" data-image-target="airmax-collection-image" data-price-target="airmax-collection-price"><option value="AirMax95.jpeg" data-price="₦38,000">Black</option><option value="airmax95green.jpeg" data-price="₦38,000">Green</option></select></label></div>
+                <a class="btn btn-outline product-pick" href="product.html?product=airmax&variant=AirMax95.jpeg">Pick</a>
+            </div></article>
+        </section>
+    </main>
+    <script src="shop-selection.js"></script>
+    <script src="api-client.js"></script>
+</body>
+</html>

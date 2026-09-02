@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Cart | arhyXL</title>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="index.html">
+            <img src="Logo.jpeg" alt="arhyXL Logo">
+        </a>
+        <nav class="main-nav">
+            <a href="index.html">Home</a>
+            <a href="about.html">About</a>
+            <a href="shop.html">Shop</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+        <div class="header-actions">
+            <a class="btn btn-outline" href="shoes.html">Continue shopping</a>
+            <a class="btn btn-outline cart-link" href="cart.html">Cart</a>
+            <a class="btn btn-outline" href="login.html">Login</a>
+        </div>
+    </header>
+
+    <main class="page-shell">
+        <section class="shop-hero">
+            <h1>Your cart</h1>
+            <p class="page-text">Choose what you'd like to keep, remove anything you no longer want, and review your total before checkout.</p>
+        </section>
+
+        <div class="cart-toolbar">
+            <button class="btn btn-outline" id="select-all">Select all</button>
+            <button class="btn btn-outline" id="deselect-all">Deselect all</button>
+            <button class="btn btn-secondary" id="delete-selected">Delete selected</button>
+        </div>
+
+        <div class="cart-layout">
+            <section id="cart-items" class="cart-list"></section>
+            <aside class="cart-summary">
+                <h2>Order summary</h2>
+                <div class="summary-row">
+                    <span>Items selected</span>
+                    <strong id="summary-count">0</strong>
+                </div>
+                <div class="summary-row">
+                    <span>Subtotal</span>
+                    <strong id="summary-total">₦0</strong>
+                </div>
+                <button class="btn btn-primary" id="checkout-btn">Proceed to checkout</button>
+            </aside>
+        </div>
+    </main>
+
+    <script src="api-client.js"></script>
+    <script>
+        const cartItems = document.getElementById('cart-items');
+        const summaryCount = document.getElementById('summary-count');
+        const summaryTotal = document.getElementById('summary-total');
+        const checkoutBtn = document.getElementById('checkout-btn');
+        let cart = [];
+        const selectedItems = new Set();
+
+        const formatPrice = (value) => new Intl.NumberFormat('en-NG', {
+            style: 'currency', currency: 'NGN', maximumFractionDigits: 0
+        }).format(value);
+
+        const renderRating = (rating) => Array.from({ length: 5 }, (_, index) => `<span class="saved-star ${index < rating ? 'selected' : ''}">&#9733;</span>`).join('');
+
+        const updateSummary = () => {
+            const items = cart.filter((item) => selectedItems.has(item.id));
+            summaryCount.textContent = String(items.reduce((total, item) => total + item.quantity, 0));
+            summaryTotal.textContent = formatPrice(items.reduce((total, item) => total + item.lineTotal, 0));
+            checkoutBtn.disabled = !items.length;
+        };
+
+        const renderCart = () => {
+            selectedItems.forEach((id) => { if (!cart.some((item) => item.id === id)) selectedItems.delete(id); });
+            if (!cart.length) {
+                cartItems.innerHTML = '<div class="empty-cart"><h3>Your cart is empty</h3><p class="page-text">Add a few favorites from the shop and they will appear here.</p><a class="btn btn-primary" href="shoes.html">Shop now</a></div>';
+                updateSummary();
+                return;
+            }
+            cartItems.innerHTML = cart.map((item) => `
+                <article class="cart-item">
+                    <label class="selection-control" aria-label="Select item">
+                        <input class="item-select" type="checkbox" data-id="${item.id}" ${selectedItems.has(item.id) ? 'checked' : ''}>
+                        <span class="selection-circle"></span>
+                    </label>
+                    <div class="cart-item-content"><img src="${item.image}" alt="${item.title}">
+                        <div class="cart-item-meta"><h3>${item.title}</h3><p><strong>Size:</strong> ${item.size}</p><p><strong>Color:</strong> ${item.variant}</p><p><strong>Quantity:</strong> ${item.quantity}</p><p><strong>Rating:</strong> <span class="saved-rating" aria-label="${item.rating} out of 5 stars">${renderRating(item.rating)}</span></p><p><strong>Note:</strong> ${item.note || 'No note added'}</p></div>
+                    </div>
+                    <div class="cart-item-actions"><p class="cart-item-price">${formatPrice(item.lineTotal)}</p><p class="cart-item-unit-price">${formatPrice(item.price)} each</p><button class="btn btn-outline remove-item" data-id="${item.id}">Remove</button></div>
+                </article>
+            `).join('');
+            document.querySelectorAll('.item-select').forEach((checkbox) => checkbox.addEventListener('change', () => {
+                const id = Number(checkbox.dataset.id);
+                if (checkbox.checked) selectedItems.add(id); else selectedItems.delete(id);
+                updateSummary();
+            }));
+            document.querySelectorAll('.remove-item').forEach((button) => button.addEventListener('click', async () => {
+                await apiRequest(`/cart/${button.dataset.id}`, { method: 'DELETE' });
+                cart = cart.filter((item) => item.id !== Number(button.dataset.id));
+                renderCart();
+            }));
+            updateSummary();
+        };
+
+        const loadCart = async () => {
+            if (!requireLogin()) return;
+            try {
+                cart = await apiRequest('/cart');
+                cart.forEach((item) => selectedItems.add(item.id));
+                renderCart();
+            } catch (error) {
+                if (error.status === 401) redirectToLogin(); else cartItems.textContent = error.message;
+            }
+        };
+
+        document.getElementById('select-all').addEventListener('click', () => { cart.forEach((item) => selectedItems.add(item.id)); renderCart(); });
+        document.getElementById('deselect-all').addEventListener('click', () => { selectedItems.clear(); renderCart(); });
+        document.getElementById('delete-selected').addEventListener('click', async () => {
+            await Promise.all(Array.from(selectedItems, (id) => apiRequest(`/cart/${id}`, { method: 'DELETE' })));
+            cart = cart.filter((item) => !selectedItems.has(item.id));
+            selectedItems.clear();
+            renderCart();
+        });
+        checkoutBtn.addEventListener('click', () => {
+            if (selectedItems.size) window.location.href = `checkout.html?items=${encodeURIComponent(Array.from(selectedItems).join(','))}`;
+        });
+        loadCart();
+    </script>
+</body>
+</html>

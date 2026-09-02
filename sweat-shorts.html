@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Sweat Shorts | arhyXL</title>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="index.html">
+            <img src="Logo.jpeg" alt="arhyXL Logo">
+        </a>
+        <nav class="main-nav">
+            <a href="index.html">Home</a>
+            <a href="about.html">About</a>
+            <a href="shop.html" class="active">Shop</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+        <div class="header-actions">
+            <a class="btn btn-secondary" href="signup.html">Signup</a>
+            <a class="btn btn-outline" href="login.html">Login</a>
+        </div>
+    </header>
+
+    <main class="page-shell">
+        <section class="shop-hero">
+            <p class="eyebrow">Collection</p>
+            <h1>Sweat Shorts</h1>
+            <p class="page-text">Relaxed lounge staples made for comfort, movement, and an easy off-duty look.</p>
+            <a class="btn btn-primary" href="shop.html">Back to shop</a>
+        </section>
+
+        <section class="product-grid">
+            <article class="product-card" data-product-id="sweatshorts">
+                <img id="sweat-shorts-image" src="shorts.jpeg" alt="Sweat shorts">
+                <div class="product-info">
+                    <h3>Sweat Shorts</h3>
+                    <p>Relaxed lounge styles made for comfort and movement.</p>
+                    <span class="price" id="sweat-shorts-price">₦15,000</span>
+                    <div class="option-row single-select">
+                        <label><span>Variation</span>
+                            <select class="product-variant" data-image-target="sweat-shorts-image" data-price-target="sweat-shorts-price">
+                                <option value="shorts.jpeg" data-price="₦15,000">Classic</option>
+                                <option value="shorts.jpeg" data-price="₦15,000">Utility</option>
+                            </select>
+                        </label>
+                    </div>
+                    <a class="btn btn-outline" href="product.html?product=sweatshorts&variant=shorts.jpeg">Pick</a>
+                </div>
+            </article>
+        </section>
+    </main>
+    <script src="shop-selection.js"></script>
+    <script src="api-client.js"></script>
+</body>
+</html>
