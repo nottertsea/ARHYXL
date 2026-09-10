@@ -300,6 +300,11 @@
                 const image = document.getElementById(select.dataset.imageTarget);
                 const price = document.getElementById(select.dataset.priceTarget);
                 const pickButton = card?.querySelector('.btn-outline');
+                if (product) {
+                    select.innerHTML = product.options.map((option) => `<option value="${option.image.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}"${option.available ? '' : ' disabled'}>${option.label}${option.available ? '' : ' - unavailable'}</option>`).join('');
+                    const firstAvailable = product.options.findIndex((option) => option.available);
+                    select.selectedIndex = firstAvailable >= 0 ? firstAvailable : 0;
+                }
                 const availability = card?.querySelector('.availability-text') || document.createElement('p');
                 availability.className = 'availability-text stock-note';
                 if (!availability.parentElement) price?.parentNode.insertBefore(availability, price);

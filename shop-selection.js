@@ -18,8 +18,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const card = select.closest('.product-card');
         const image = document.getElementById(select.dataset.imageTarget);
         const price = document.getElementById(select.dataset.priceTarget);
-        const pickButton = card ? card.querySelector('.product-pick, a[href*="product.html"]') : null;
+        const pickButton = card ? card.querySelector('.product-pick, a[href*="product.html"], .btn-outline') : null;
         const product = card ? liveProducts.get(card.dataset.productId) : null;
+        if (product) {
+            select.innerHTML = product.options.map((option) => `<option value="${option.image.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}"${option.available ? '' : ' disabled'}>${option.label}${option.available ? '' : ' - unavailable'}</option>`).join('');
+            const firstAvailable = product.options.findIndex((option) => option.available);
+            select.selectedIndex = firstAvailable >= 0 ? firstAvailable : 0;
+        }
         const availability = product ? document.createElement('small') : null;
         if (availability) {
             availability.className = 'stock-note';
