@@ -57,6 +57,8 @@ The repository's existing data file is SQLite. To migrate that data, export rows
 8. Configure production MySQL credentials only after the MySQL adapter is connected and tested.
 9. Set Paystack webhook URL to `https://YOUR-BACKEND-DOMAIN/api/paystack/webhook`.
 
+The repository includes `railway.toml`, which tells Railway to use Nixpacks, run `npm start`, and wait for `/api/health` before marking the service healthy.
+
 Railway variables that must be set on the backend service:
 
 ```env
@@ -77,6 +79,8 @@ OWNER_PASSWORD=use-a-private-password-at-least-6-characters
 Do not use `localhost` in `FRONTEND_ORIGIN` or `PAYSTACK_CALLBACK_URL` after publishing. Redeploy the Railway service after changing variables. The backend health endpoint should return `paystackConfigured: true` and `ownerConfigured: true`.
 
 The owner profile is created automatically in the database during backend startup. Nobody should sign up as an owner. Railway Variables must include `OWNER_EMAIL` and `OWNER_PASSWORD`; the local `.env` file is ignored by Git and is never copied to Railway. If those two variables are temporarily missing, the storefront still starts, but owner login returns a configuration message until they are added and the service is redeployed.
+
+After the first deploy, open Railway's service **Variables** tab and add the two owner variables directly there. GitHub cannot carry the local `.env` file, and the password must not be committed to the repository. Then redeploy and open `/owner.html` on the Railway service domain.
 
 ## Vercel frontend
 
