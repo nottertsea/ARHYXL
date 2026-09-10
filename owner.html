@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Owner Control | arhyXL</title>
+</head>
+<body>
+    <header class="site-header">
+        <a class="brand" href="index.html"><img src="Logo.jpeg" alt="arhyXL Logo"></a>
+        <nav class="main-nav"><a href="index.html">Storefront</a><a href="shop.html">Shop</a></nav>
+        <div class="header-actions"><button class="btn btn-outline" id="logout-button" type="button">Log out</button></div>
+    </header>
+    <main class="page-shell owner-shell">
+        <section class="shop-hero">
+            <p class="eyebrow">Owner control</p>
+            <h1>Welcome, Mateo.</h1>
+            <p class="page-text">Keep prices, stock, and promotions up to date.</p>
+        </section>
+        <section class="owner-status-grid">
+            <div class="owner-status"><span>Signed in as</span><strong id="owner-name">Loading...</strong></div>
+            <div class="owner-status"><span>Payment gateway</span><strong id="paystack-status">Checking...</strong></div>
+        </section>
+        <p id="owner-status" class="form-status" role="status"></p>
+        <section class="owner-product owner-create-panel">
+            <div class="owner-product-heading"><div><h2>Add a product</h2><p>Create a new item with its first picture and variant.</p></div></div>
+            <form id="create-product-form" class="owner-create-form">
+                <div class="owner-fields"><label>Product ID<input name="id" placeholder="linen-shirt" required></label><label>Product name<input name="title" required></label><label>Base price (NGN)<input name="price" type="number" min="0" required></label><label>Stock<input name="stock" type="number" min="0" required></label><label>Discount (%)<input name="discountPercent" type="number" min="0" max="100" value="0" required></label><label>Sizes<input name="sizes" placeholder="S, M, L, XL" required></label><label>First variant<input name="variantLabel" placeholder="Black" required></label><label>Picture URL or path<input name="image" placeholder="images/linen-shirt-black.jpg" required></label></div>
+                <label>Description<textarea name="description" rows="3" required></textarea></label>
+                <button class="btn btn-primary" type="submit">Add product</button>
+            </form>
+            <p id="create-product-status" class="form-status" role="status"></p>
+        </section>
+        <section id="owner-products" class="owner-products" aria-live="polite"></section>
+    </main>
+    <script src="api-client.js"></script>
+    <script>
+        const productList = document.getElementById('owner-products');
+        const statusElement = document.getElementById('owner-status');
+        const formatNaira = (value) => new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(value);
+        const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
+
+        const showLogin = () => { window.location.href = 'login.html?next=owner.html'; };
+        const loadOwner = async () => {
+            try {
+                const me = await apiRequest('/me');
+                if (me.user.role !== 'owner') throw new Error('Owner access required.');
+                document.getElementById('owner-name').textContent = `${me.user.name} (${me.user.email})`;
+                const health = await apiRequest('/health');
+                document.getElementById('paystack-status').textContent = health.paystackConfigured ? 'Ready' : 'Add a Paystack secret key';
+                renderProducts(await apiRequest('/admin/products'));
+            } catch (error) {
+                if (error.status === 401 || error.status === 403) showLogin();
+                else statusElement.textContent = error.message;
+            }
+        };
+        const renderProducts = (products) => {
+            productList.innerHTML = products.map((product) => `<form class="owner-product" data-product-id="${escapeHtml(product.id)}">
+                <div class="owner-product-heading"><div><h2>${escapeHtml(product.title)}</h2><p>${formatNaira(product.originalPrice)} base price</p></div><strong>${formatNaira(product.price)} live price</strong></div>
+                <div class="owner-variants">${product.options.map((option) => `<div class="owner-variant"><img src="${escapeHtml(option.image)}" alt="${escapeHtml(product.title)} - ${escapeHtml(option.label)}"><div><strong>${escapeHtml(option.label)}</strong><small>${escapeHtml(option.image)}</small><label class="variant-stock">Stock<input class="variant-stock-input" type="number" min="0" value="${option.stock}" data-image="${escapeHtml(option.image)}"></label></div><button class="btn btn-outline save-variant" type="button" data-image="${escapeHtml(option.image)}">Save stock</button><button class="btn btn-outline remove-variant" type="button" data-image="${escapeHtml(option.image)}">Remove variant</button></div>`).join('')}</div>
+                <div class="owner-add-variant"><input name="variantLabel" placeholder="New variant name"><input name="variantImage" placeholder="Picture URL or path"><input name="variantStock" type="number" min="0" placeholder="Stock"><button class="btn btn-outline add-variant" type="button">Add variant</button></div>
+                <div class="owner-fields"><label>Base price (NGN)<input name="price" type="number" min="0" step="1" value="${product.originalPrice}" required></label><label>Discount (%)<input name="discountPercent" type="number" min="0" max="100" step="1" value="${product.discountPercent}" required></label></div>
+                <button class="btn btn-primary" type="submit">Save changes</button><button class="btn btn-outline remove-product" type="button">Remove product</button><span class="owner-save-status" role="status"></span>
+            </form>`).join('');
+            productList.querySelectorAll('form').forEach((form) => form.addEventListener('submit', saveProduct));
+            productList.querySelectorAll('.remove-product').forEach((button) => button.addEventListener('click', () => removeProduct(button.closest('form'))));
+            productList.querySelectorAll('.remove-variant').forEach((button) => button.addEventListener('click', () => removeVariant(button.closest('form'), button.dataset.image)));
+            productList.querySelectorAll('.save-variant').forEach((button) => button.addEventListener('click', () => saveVariant(button.closest('form'), button.dataset.image)));
+            productList.querySelectorAll('.add-variant').forEach((button) => button.addEventListener('click', () => addVariant(button.closest('form'))));
+        };
+        const removeProduct = async (form) => { if (!window.confirm(`Remove ${form.querySelector('h2').textContent} from the store?`)) return; try { await apiRequest(`/admin/products/${encodeURIComponent(form.dataset.productId)}`, { method: 'DELETE' }); await loadOwner(); } catch (error) { statusElement.textContent = error.message; } };
+        const removeVariant = async (form, image) => { if (!window.confirm('Remove this variant from the store?')) return; try { await apiRequest(`/admin/products/${encodeURIComponent(form.dataset.productId)}/variants`, { method: 'DELETE', body: JSON.stringify({ image }) }); await loadOwner(); } catch (error) { statusElement.textContent = error.message; } };
+        const addVariant = async (form) => { const label = form.querySelector('[name="variantLabel"]').value; const image = form.querySelector('[name="variantImage"]').value; const stock = Number(form.querySelector('[name="variantStock"]').value); try { await apiRequest(`/admin/products/${encodeURIComponent(form.dataset.productId)}/variants`, { method: 'POST', body: JSON.stringify({ label, image, stock }) }); await loadOwner(); } catch (error) { statusElement.textContent = error.message; } };
+        const saveVariant = async (form, image) => { const input = form.querySelector(`[data-image="${CSS.escape(image)}"]`); try { await apiRequest(`/admin/products/${encodeURIComponent(form.dataset.productId)}/variants`, { method: 'PATCH', body: JSON.stringify({ image, stock: Number(input.value) }) }); await loadOwner(); } catch (error) { statusElement.textContent = error.message; } };
+        document.getElementById('create-product-form').addEventListener('submit', async (event) => { event.preventDefault(); const form = event.currentTarget; const status = document.getElementById('create-product-status'); status.textContent = 'Adding...'; try { await apiRequest('/admin/products', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(form).entries())) }); form.reset(); status.textContent = 'Product added.'; await loadOwner(); } catch (error) { status.textContent = error.message; } });
+        const saveProduct = async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const saveStatus = form.querySelector('.owner-save-status');
+            const body = Object.fromEntries(new FormData(form).entries());
+            saveStatus.textContent = 'Saving...';
+            try { await apiRequest(`/admin/products/${encodeURIComponent(form.dataset.productId)}`, { method: 'PATCH', body: JSON.stringify({ price: Number(body.price), stock: Number(body.stock), discountPercent: Number(body.discountPercent) }) }); saveStatus.textContent = 'Saved'; } catch (error) { saveStatus.textContent = error.message; }
+        };
+        document.getElementById('logout-button').addEventListener('click', async () => { try { await apiRequest('/auth/logout', { method: 'POST' }); } finally { clearSession(); window.location.href = 'index.html'; } });
+        loadOwner();
+    </script>
+</body>
+</html>

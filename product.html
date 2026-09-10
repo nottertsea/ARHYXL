@@ -299,6 +299,21 @@
             document.getElementById('detail-title').textContent = product.title;
             document.getElementById('detail-price').textContent = product.price;
             document.getElementById('detail-description').textContent = product.description;
+            const formatPrice = (value) => new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(value);
+            let livePrice = Number(product.price.replace(/[^0-9]/g, ''));
+            const renderLivePrice = (liveProduct) => {
+                const priceElement = document.getElementById('detail-price');
+                priceElement.classList.toggle('sale-price', liveProduct.discountPercent > 0);
+                priceElement.innerHTML = liveProduct.discountPercent > 0
+                    ? `<span class="old-price">${formatPrice(liveProduct.originalPrice)}</span><strong>${formatPrice(liveProduct.price)}</strong><span class="discount-badge">-${liveProduct.discountPercent}%</span>`
+                    : formatPrice(liveProduct.price);
+            };
+            apiRequest(`/products/${encodeURIComponent(productId)}`).then((liveProduct) => {
+                livePrice = liveProduct.price;
+                renderLivePrice(liveProduct);
+                document.querySelector('.availability-text').textContent = liveProduct.available ? (liveProduct.lowStock ? 'Low stock' : 'In stock') : 'Out of stock';
+                document.getElementById('add-to-cart').disabled = !liveProduct.available;
+            }).catch(() => {});
 
             const colorSelect = document.getElementById('detail-color');
             const sizeSelect = document.getElementById('detail-size');
@@ -344,7 +359,7 @@
                 if (nextOption) {
                     image.src = nextOption.value;
                     image.alt = nextOption.label;
-                    document.getElementById('detail-price').textContent = nextOption.price;
+                    document.getElementById('detail-price').textContent = formatPrice(livePrice);
                 }
             });
 

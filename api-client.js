@@ -67,6 +67,13 @@ const updateAuthAction = async () => {
         greeting.className = 'auth-greeting';
         greeting.textContent = `Hello, ${firstName}`;
         actions.prepend(greeting);
+        if (data.user.role !== 'owner' && !actions.querySelector('a[href="account.html"]')) {
+            const accountLink = document.createElement('a');
+            accountLink.className = 'btn btn-outline';
+            accountLink.href = 'account.html';
+            accountLink.textContent = 'Account';
+            actions.prepend(accountLink);
+        }
 
         const logoutLink = signupLink || loginLink;
         if (signupLink && loginLink) loginLink.remove();

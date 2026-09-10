@@ -35,19 +35,38 @@ const productSeed = [
 ];
 
 const parseJsonColumn = (value) => typeof value === 'string' ? JSON.parse(value) : value;
-const publicProduct = (row) => ({ id: row.id, title: row.title, description: row.description, price: Number(row.price), sizes: parseJsonColumn(row.sizes_json), options: parseJsonColumn(row.options_json) });
+const productOptions = (row) => parseJsonColumn(row.options_json).map((option) => ({ ...option, stock: Number.isInteger(Number(option.stock)) ? Number(option.stock) : Number(row.stock || 0) }));
+const publicProduct = (row) => {
+    const price = Number(row.price);
+    const discountPercent = Number(row.discount_percent || 0);
+    const options = productOptions(row);
+    const stock = options.reduce((total, option) => total + option.stock, 0);
+    return { id: row.id, title: row.title, description: row.description, price: Math.round(price * (100 - discountPercent) / 100), originalPrice: price, discountPercent, available: stock > 0, lowStock: stock > 0 && stock <= 10, sizes: parseJsonColumn(row.sizes_json), options: options.map(({ stock: variantStock, ...option }) => ({ ...option, available: variantStock > 0, lowStock: variantStock > 0 && variantStock <= 10 })) };
+};
+const adminProduct = (row) => ({ ...publicProduct(row), stock: productOptions(row).reduce((total, option) => total + option.stock, 0), options: productOptions(row) });
+const activePrice = (product) => Math.round(Number(product.price) * (100 - Number(product.discount_percent || 0)) / 100);
 const validText = (value, max) => typeof value === 'string' && value.trim().length > 0 && value.length <= max;
 const authUser = async (request) => {
     const token = request.get('authorization')?.replace(/^Bearer\s+/i, '');
-    return token ? db.get('SELECT users.id, users.name, users.email FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.token = ?', [token]) : null;
+    return token ? db.get('SELECT users.id, users.name, users.email, users.role FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.token = ?', [token]) : null;
 };
 const requireUser = async (request, response, next) => {
     request.user = await authUser(request);
     if (!request.user) return response.status(401).json({ error: 'Authentication required.' });
     return next();
 };
+const requireOwner = async (request, response, next) => {
+    request.user = await authUser(request);
+    if (!request.user) return response.status(401).json({ error: 'Authentication required.' });
+    if (request.user.role !== 'owner') return response.status(403).json({ error: 'Owner access required.' });
+    return next();
+};
+const ensureAccountSettings = async (userId) => {
+    const sql = db.client === 'mysql' ? 'INSERT IGNORE INTO account_settings (user_id) VALUES (?)' : 'INSERT INTO account_settings (user_id) VALUES (?) ON CONFLICT(user_id) DO NOTHING';
+    await db.run(sql, [userId]);
+};
 const paystackRequest = async (endpoint, options = {}) => {
-    if (!hasUsablePaystackSecret) throw new Error('Paystack is unavailable: set PAYSTACK_SECRET_KEY to a real sk_test_ or sk_live_ key on the backend.');
+    if (!hasUsablePaystackSecret) throw new Error('Payments are temporarily unavailable. Add a real Paystack secret key (sk_test_ or sk_live_) to the backend .env and restart the server.');
     console.log(`[Paystack] ${options.method || 'GET'} ${endpoint} (secret loaded: ${paystackSecretKey.length} chars)`);
     const result = await fetch(`https://api.paystack.co${endpoint}`, { ...options, headers: { Authorization: `Bearer ${paystackSecretKey}`, 'Content-Type': 'application/json' } });
     const data = await result.json();
@@ -71,7 +90,7 @@ app.use((request, response, next) => {
 app.use((request, response, next) => /^\/(?:arhyxl\.sqlite|schema\.sql|mysql-schema\.sql|server\.js|db\.js|package(?:-lock)?\.json|node_modules)(?:\/|$)/.test(request.path) ? response.sendStatus(404) : next());
 app.use(express.static(__dirname));
 
-app.get('/api/health', (request, response) => response.json({ ok: true, database: db.client }));
+app.get('/api/health', (request, response) => response.json({ ok: true, database: db.client, paystackConfigured: hasUsablePaystackSecret }));
 app.get('/api/products', async (request, response, next) => { try { response.json((await db.all('SELECT * FROM products ORDER BY title')).map(publicProduct)); } catch (error) { next(error); } });
 app.get('/api/products/:id', async (request, response, next) => { try { const product = await db.get('SELECT * FROM products WHERE id = ?', [request.params.id]); if (!product) return response.status(404).json({ error: 'Product not found.' }); return response.json(publicProduct(product)); } catch (error) { next(error); } });
 
@@ -95,13 +114,104 @@ app.post('/api/auth/login', async (request, response, next) => {
         if (await db.get('SELECT 1 FROM sessions WHERE user_id = ? LIMIT 1', [user.id])) return response.status(409).json({ error: 'This account is already logged in. Log out first.' });
         const token = crypto.randomBytes(32).toString('hex');
         await db.run('INSERT INTO sessions (token, user_id) VALUES (?, ?)', [token, user.id]);
-        return response.json({ token, user: { id: user.id, name: user.name, email: user.email } });
+        return response.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
     } catch (error) { return next(error); }
 });
 app.post('/api/auth/logout', requireUser, async (request, response, next) => { try { await db.run('DELETE FROM sessions WHERE token = ?', [request.get('authorization').replace(/^Bearer\s+/i, '')]); response.status(204).end(); } catch (error) { next(error); } });
 app.get('/api/me', requireUser, (request, response) => response.json({ user: request.user }));
+app.get('/api/account/orders', requireUser, async (request, response, next) => {
+    try {
+        const orders = await db.all('SELECT orders.order_reference, orders.status, orders.payment_status, orders.amount_kobo, orders.amount_paid_kobo, orders.customer_name, orders.delivery_address, orders.created_at, orders.paid_at, EXISTS (SELECT 1 FROM returns WHERE returns.order_id = orders.id) AS has_return FROM orders WHERE orders.user_id = ? ORDER BY orders.created_at DESC', [request.user.id]);
+        response.json(orders.map((order) => ({ ...order, status: order.status === 'paid' || order.status === 'pending' ? 'processing' : order.status, has_return: Boolean(order.has_return) })));
+    } catch (error) { next(error); }
+});
+app.get('/api/account', requireUser, async (request, response, next) => { try { await ensureAccountSettings(request.user.id); const [addresses, paymentMethods, settings] = await Promise.all([db.all('SELECT * FROM addresses WHERE user_id = ? ORDER BY is_default DESC, id DESC', [request.user.id]), db.all('SELECT id, provider, label, brand, last4, expiry_month, expiry_year FROM payment_methods WHERE user_id = ? ORDER BY id DESC', [request.user.id]), db.get('SELECT * FROM account_settings WHERE user_id = ?', [request.user.id])]); response.json({ addresses, paymentMethods, settings }); } catch (error) { next(error); } });
+app.post('/api/account/addresses', requireUser, async (request, response, next) => { try { const { label, recipientName, phone, addressLine, city, state, isDefault = false } = request.body || {}; if (![label, recipientName, phone, addressLine, city, state].every((value) => validText(value, 255))) return response.status(400).json({ error: 'Complete address details are required.' }); if (isDefault) await db.run('UPDATE addresses SET is_default = 0 WHERE user_id = ?', [request.user.id]); const result = await db.run('INSERT INTO addresses (user_id, label, recipient_name, phone, address_line, city, state, is_default) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [request.user.id, label.trim(), recipientName.trim(), phone.trim(), addressLine.trim(), city.trim(), state.trim(), isDefault ? 1 : 0]); response.status(201).json(await db.get('SELECT * FROM addresses WHERE id = ?', [result.lastInsertRowid])); } catch (error) { next(error); } });
+app.delete('/api/account/addresses/:id', requireUser, async (request, response, next) => { try { await db.run('DELETE FROM addresses WHERE id = ? AND user_id = ?', [request.params.id, request.user.id]); response.status(204).end(); } catch (error) { next(error); } });
+app.post('/api/account/payment-methods', requireUser, async (request, response, next) => { try { const { label, brand, last4, expiryMonth, expiryYear } = request.body || {}; if (!validText(label, 80) || !validText(brand, 30) || !/^\d{4}$/.test(last4 || '') || !/^\d{2}$/.test(expiryMonth || '') || !/^\d{4}$/.test(expiryYear || '')) return response.status(400).json({ error: 'Use card label, brand, last four digits, and expiry details.' }); const result = await db.run('INSERT INTO payment_methods (user_id, label, brand, last4, expiry_month, expiry_year) VALUES (?, ?, ?, ?, ?, ?)', [request.user.id, label.trim(), brand.trim(), last4, expiryMonth, expiryYear]); response.status(201).json(await db.get('SELECT id, provider, label, brand, last4, expiry_month, expiry_year FROM payment_methods WHERE id = ?', [result.lastInsertRowid])); } catch (error) { next(error); } });
+app.delete('/api/account/payment-methods/:id', requireUser, async (request, response, next) => { try { await db.run('DELETE FROM payment_methods WHERE id = ? AND user_id = ?', [request.params.id, request.user.id]); response.status(204).end(); } catch (error) { next(error); } });
+app.patch('/api/account/settings', requireUser, async (request, response, next) => { try { const values = ['order_notifications', 'promotion_notifications', 'security_notifications', 'profile_visible']; await ensureAccountSettings(request.user.id); for (const field of values) if (typeof request.body?.[field] === 'boolean') await db.run(`UPDATE account_settings SET ${field} = ? WHERE user_id = ?`, [request.body[field] ? 1 : 0, request.user.id]); response.json(await db.get('SELECT * FROM account_settings WHERE user_id = ?', [request.user.id])); } catch (error) { next(error); } });
+app.patch('/api/account/security', requireUser, async (request, response, next) => { try { const { currentPassword, newPassword } = request.body || {}; const user = await db.get('SELECT password_hash FROM users WHERE id = ?', [request.user.id]); if (!user || !(await bcrypt.compare(currentPassword || '', user.password_hash)) || typeof newPassword !== 'string' || newPassword.length < 6) return response.status(400).json({ error: 'Current password is incorrect or the new password is too short.' }); await db.run('UPDATE users SET password_hash = ? WHERE id = ?', [await bcrypt.hash(newPassword, 12), request.user.id]); response.json({ message: 'Password updated.' }); } catch (error) { next(error); } });
+app.post('/api/account/returns', requireUser, async (request, response, next) => { try { const { orderReference, reason } = request.body || {}; const order = await db.get('SELECT id FROM orders WHERE order_reference = ? AND user_id = ? AND payment_status = ?', [orderReference, request.user.id, 'success']); if (!order || !validText(reason, 1000)) return response.status(400).json({ error: 'A paid order and return reason are required.' }); const result = await db.run('INSERT INTO returns (order_id, user_id, reason) VALUES (?, ?, ?)', [order.id, request.user.id, reason.trim()]); response.status(201).json({ id: result.lastInsertRowid, status: 'requested' }); } catch (error) { next(error); } });
+app.delete('/api/account', requireUser, async (request, response, next) => { try { const user = await db.get('SELECT password_hash FROM users WHERE id = ?', [request.user.id]); if (!(await bcrypt.compare(request.body?.password || '', user.password_hash))) return response.status(400).json({ error: 'Password confirmation failed.' }); await db.run('DELETE FROM users WHERE id = ?', [request.user.id]); response.status(204).end(); } catch (error) { next(error); } });
 
-app.get('/api/cart', requireUser, async (request, response, next) => { try { const rows = await db.all('SELECT cart_items.*, products.title, products.price FROM cart_items JOIN products ON products.id = cart_items.product_id WHERE user_id = ? ORDER BY cart_items.id DESC', [request.user.id]); response.json(rows.map((item) => ({ ...item, price: Number(item.price), image: item.variant, lineTotal: Number(item.price) * item.quantity, selected: true }))); } catch (error) { next(error); } });
+app.get('/api/admin/products', requireOwner, async (request, response, next) => { try { response.json((await db.all('SELECT * FROM products ORDER BY title')).map(adminProduct)); } catch (error) { next(error); } });
+app.post('/api/admin/products', requireOwner, async (request, response, next) => {
+    try {
+        const { id, title, description = '', price, stock, discountPercent = 0, sizes = '', variantLabel, image } = request.body || {};
+        const sizesList = Array.isArray(sizes) ? sizes : String(sizes).split(',').map((size) => size.trim()).filter(Boolean);
+        const numericPrice = Number(price);
+        const numericStock = Number(stock);
+        const numericDiscount = Number(discountPercent);
+        if (!/^[a-z0-9-]{2,100}$/.test(id || '') || !validText(title, 255) || !validText(description, 2000) || !Number.isInteger(numericPrice) || numericPrice < 0 || !Number.isInteger(numericStock) || numericStock < 0 || !Number.isInteger(numericDiscount) || numericDiscount < 0 || numericDiscount > 100 || !sizesList.length || !validText(variantLabel, 100) || !validText(image, 1000)) return response.status(400).json({ error: 'Provide a valid id, title, description, price, stock, discount, sizes, variant label, and image URL/path.' });
+        const options = [{ label: variantLabel.trim(), image: image.trim(), price: numericPrice, stock: numericStock }];
+        await db.run('INSERT INTO products (id, title, description, price, stock, discount_percent, sizes_json, options_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [id, title.trim(), description.trim(), numericPrice, numericStock, numericDiscount, JSON.stringify(sizesList), JSON.stringify(options)]);
+        return response.status(201).json(adminProduct(await db.get('SELECT * FROM products WHERE id = ?', [id])));
+    } catch (error) { if (error.code === 'SQLITE_CONSTRAINT_UNIQUE' || error.code === 'ER_DUP_ENTRY') return response.status(409).json({ error: 'A product with that id already exists.' }); return next(error); }
+});
+app.patch('/api/admin/products/:id', requireOwner, async (request, response, next) => {
+    try {
+        const price = Number(request.body?.price);
+        const stock = request.body?.stock === undefined ? null : Number(request.body.stock);
+        const discountPercent = Number(request.body?.discountPercent);
+        if (!Number.isInteger(price) || price < 0 || (stock !== null && (!Number.isInteger(stock) || stock < 0)) || !Number.isInteger(discountPercent) || discountPercent < 0 || discountPercent > 100) return response.status(400).json({ error: 'Price must be a whole number and discount must be between 0 and 100.' });
+        const result = stock === null ? await db.run('UPDATE products SET price = ?, discount_percent = ? WHERE id = ?', [price, discountPercent, request.params.id]) : await db.run('UPDATE products SET price = ?, stock = ?, discount_percent = ? WHERE id = ?', [price, stock, discountPercent, request.params.id]);
+        if (!result.changes) return response.status(404).json({ error: 'Product not found.' });
+        return response.json(adminProduct(await db.get('SELECT * FROM products WHERE id = ?', [request.params.id])));
+    } catch (error) { next(error); }
+});
+app.post('/api/admin/products/:id/variants', requireOwner, async (request, response, next) => {
+    try {
+        const { label, image } = request.body || {};
+        const stock = Number(request.body?.stock);
+        if (!validText(label, 100) || !validText(image, 1000) || !Number.isInteger(stock) || stock < 0) return response.status(400).json({ error: 'Variant label, image URL/path, and a non-negative stock value are required.' });
+        const product = await db.get('SELECT * FROM products WHERE id = ?', [request.params.id]);
+        if (!product) return response.status(404).json({ error: 'Product not found.' });
+        const options = productOptions(product);
+        if (options.some((option) => option.image === image.trim())) return response.status(409).json({ error: 'That variant image already exists.' });
+        options.push({ label: label.trim(), image: image.trim(), price: Number(product.price), stock });
+        await db.run('UPDATE products SET options_json = ? WHERE id = ?', [JSON.stringify(options), request.params.id]);
+        return response.json(adminProduct(await db.get('SELECT * FROM products WHERE id = ?', [request.params.id])));
+    } catch (error) { next(error); }
+});
+app.patch('/api/admin/products/:id/variants', requireOwner, async (request, response, next) => {
+    try {
+        const stock = Number(request.body?.stock);
+        const product = await db.get('SELECT * FROM products WHERE id = ?', [request.params.id]);
+        if (!product || !validText(request.body?.image, 1000) || !Number.isInteger(stock) || stock < 0) return response.status(400).json({ error: 'Product, variant image, and non-negative stock are required.' });
+        const options = productOptions(product);
+        const variant = options.find((option) => option.image === request.body.image);
+        if (!variant) return response.status(404).json({ error: 'Variant not found.' });
+        variant.stock = stock;
+        await db.run('UPDATE products SET options_json = ?, stock = ? WHERE id = ?', [JSON.stringify(options), options.reduce((total, option) => total + option.stock, 0), request.params.id]);
+        return response.json(adminProduct(await db.get('SELECT * FROM products WHERE id = ?', [request.params.id])));
+    } catch (error) { next(error); }
+});
+app.delete('/api/admin/products/:id/variants', requireOwner, async (request, response, next) => {
+    try {
+        const product = await db.get('SELECT * FROM products WHERE id = ?', [request.params.id]);
+        if (!product) return response.status(404).json({ error: 'Product not found.' });
+        const currentOptions = productOptions(product);
+        const options = currentOptions.filter((option) => option.image !== request.body?.image);
+        if (options.length === currentOptions.length) return response.status(404).json({ error: 'Variant not found.' });
+        if (!options.length) return response.status(400).json({ error: 'A product must keep at least one variant.' });
+        await db.run('UPDATE products SET options_json = ?, stock = ? WHERE id = ?', [JSON.stringify(options), options.reduce((total, option) => total + option.stock, 0), request.params.id]);
+        await db.run('DELETE FROM cart_items WHERE product_id = ? AND variant = ?', [request.params.id, request.body.image]);
+        return response.json(adminProduct(await db.get('SELECT * FROM products WHERE id = ?', [request.params.id])));
+    } catch (error) { next(error); }
+});
+app.delete('/api/admin/products/:id', requireOwner, async (request, response, next) => {
+    try {
+        const product = await db.get('SELECT id FROM products WHERE id = ?', [request.params.id]);
+        if (!product) return response.status(404).json({ error: 'Product not found.' });
+        await db.run('DELETE FROM cart_items WHERE product_id = ?', [request.params.id]);
+        const result = await db.run('DELETE FROM products WHERE id = ?', [request.params.id]);
+        if (!result.changes) return response.status(404).json({ error: 'Product not found.' });
+        return response.status(204).end();
+    } catch (error) { next(error); }
+});
+
+app.get('/api/cart', requireUser, async (request, response, next) => { try { const rows = await db.all('SELECT cart_items.*, products.title, products.price, products.discount_percent, products.stock FROM cart_items JOIN products ON products.id = cart_items.product_id WHERE user_id = ? ORDER BY cart_items.id DESC', [request.user.id]); response.json(rows.map((item) => ({ ...item, price: activePrice(item), originalPrice: Number(item.price), discountPercent: Number(item.discount_percent || 0), image: item.variant, lineTotal: activePrice(item) * item.quantity, selected: true }))); } catch (error) { next(error); } });
 app.post('/api/cart', requireUser, async (request, response, next) => {
     try {
         const { productId, variant, size, note = '', rating = 0, quantity = 1 } = request.body || {};
@@ -109,13 +219,17 @@ app.post('/api/cart', requireUser, async (request, response, next) => {
         const options = product ? parseJsonColumn(product.options_json) : [];
         const sizes = product ? parseJsonColumn(product.sizes_json) : [];
         if (!product || !options.some((option) => option.image === variant) || !sizes.includes(size) || (note !== '' && !validText(note, 1000)) || !Number.isInteger(quantity) || quantity < 1 || quantity > 99 || !Number.isInteger(Number(rating)) || rating < 0 || rating > 5) return response.status(400).json({ error: 'Invalid cart item.' });
-        const existing = await db.get('SELECT id FROM cart_items WHERE user_id = ? AND product_id = ? AND variant = ? AND size = ? AND note = ? AND rating = ?', [request.user.id, productId, variant, size, note, rating]);
+        const existing = await db.get('SELECT id, quantity FROM cart_items WHERE user_id = ? AND product_id = ? AND variant = ? AND size = ? AND note = ? AND rating = ?', [request.user.id, productId, variant, size, note, rating]);
+        const selectedVariant = productOptions(product).find((option) => option.image === variant);
+        const availableStock = selectedVariant?.stock || 0;
+        if (existing && existing.quantity + quantity > availableStock) return response.status(409).json({ error: 'There is not enough stock for that color variant.' });
+        if (!existing && quantity > availableStock) return response.status(409).json({ error: 'There is not enough stock for that color variant.' });
         if (existing) await db.run('UPDATE cart_items SET quantity = quantity + ? WHERE id = ? AND user_id = ?', [quantity, existing.id, request.user.id]);
         else await db.run('INSERT INTO cart_items (user_id, product_id, variant, size, note, rating, quantity) VALUES (?, ?, ?, ?, ?, ?, ?)', [request.user.id, productId, variant, size, note, rating, quantity]);
         return response.status(201).json({ message: 'Item added to cart.' });
     } catch (error) { next(error); }
 });
-app.patch('/api/cart/:id', requireUser, async (request, response, next) => { try { const quantity = Number(request.body?.quantity); if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) return response.status(400).json({ error: 'Quantity must be between 1 and 99.' }); const result = await db.run('UPDATE cart_items SET quantity = ? WHERE id = ? AND user_id = ?', [quantity, request.params.id, request.user.id]); if (!result.changes) return response.status(404).json({ error: 'Cart item not found.' }); response.json({ message: 'Cart updated.' }); } catch (error) { next(error); } });
+app.patch('/api/cart/:id', requireUser, async (request, response, next) => { try { const quantity = Number(request.body?.quantity); const item = await db.get('SELECT cart_items.id, cart_items.variant, products.options_json FROM cart_items JOIN products ON products.id = cart_items.product_id WHERE cart_items.id = ? AND cart_items.user_id = ?', [request.params.id, request.user.id]); if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) return response.status(400).json({ error: 'Quantity must be between 1 and 99.' }); if (!item) return response.status(404).json({ error: 'Cart item not found.' }); const selectedVariant = productOptions({ options_json: item.options_json, stock: 0 }).find((option) => option.image === item.variant); if (!selectedVariant || quantity > selectedVariant.stock) return response.status(409).json({ error: 'There is not enough stock for that color variant.' }); const result = await db.run('UPDATE cart_items SET quantity = ? WHERE id = ? AND user_id = ?', [quantity, request.params.id, request.user.id]); if (!result.changes) return response.status(404).json({ error: 'Cart item not found.' }); response.json({ message: 'Cart updated.' }); } catch (error) { next(error); } });
 app.delete('/api/cart/:id', requireUser, async (request, response, next) => { try { const result = await db.run('DELETE FROM cart_items WHERE id = ? AND user_id = ?', [request.params.id, request.user.id]); if (!result.changes) return response.status(404).json({ error: 'Cart item not found.' }); response.status(204).end(); } catch (error) { next(error); } });
 
 app.post('/api/orders/initialize', requireUser, async (request, response, next) => {
@@ -127,9 +241,10 @@ app.post('/api/orders/initialize', requireUser, async (request, response, next) 
         if (prior?.paystack_reference && prior.authorization_url) return response.json({ orderReference: prior.order_reference, amountKobo: prior.amount_kobo, authorizationUrl: prior.authorization_url, message: 'This checkout attempt already exists.' });
         const ids = itemIds.map(Number).filter(Number.isInteger);
         const placeholders = ids.map(() => '?').join(',');
-        const items = await db.all(`SELECT cart_items.id AS cart_item_id, cart_items.*, products.title, products.price FROM cart_items JOIN products ON products.id = cart_items.product_id WHERE cart_items.user_id = ? AND cart_items.id IN (${placeholders})`, [request.user.id, ...ids]);
+        const items = await db.all(`SELECT cart_items.id AS cart_item_id, cart_items.*, products.title, products.price, products.discount_percent, products.stock, products.options_json FROM cart_items JOIN products ON products.id = cart_items.product_id WHERE cart_items.user_id = ? AND cart_items.id IN (${placeholders})`, [request.user.id, ...ids]);
         if (items.length !== ids.length) return response.status(400).json({ error: 'One or more cart items are no longer available.' });
-        const amountKobo = items.reduce((total, item) => total + Number(item.price) * item.quantity * 100, 0);
+        if (items.some((item) => item.quantity > (productOptions(item).find((option) => option.image === item.variant)?.stock || 0))) return response.status(409).json({ error: 'One or more items exceed the available stock. Update your cart and try again.' });
+        const amountKobo = items.reduce((total, item) => total + activePrice(item) * item.quantity * 100, 0);
         if (prior) {
             if (Number(prior.amount_kobo) !== amountKobo) return response.status(409).json({ error: 'This checkout attempt does not match the current cart.' });
             orderReference = prior.order_reference;
@@ -137,7 +252,7 @@ app.post('/api/orders/initialize', requireUser, async (request, response, next) 
             orderReference = `ARHYXL-${Date.now()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
             await db.transaction(async (tx) => {
                 const order = await tx.run('INSERT INTO orders (order_reference, idempotency_key, user_id, amount_kobo, customer_name, customer_email, customer_phone, delivery_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [orderReference, idempotencyKey, request.user.id, amountKobo, name.trim(), email.trim().toLowerCase(), phone.trim(), address.trim()]);
-                for (const item of items) await tx.run('INSERT INTO order_items (order_id, cart_item_id, product_id, title, variant, size, unit_price_kobo, quantity, line_total_kobo, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [order.lastInsertRowid, item.cart_item_id, item.product_id, item.title, item.variant, item.size, Number(item.price) * 100, item.quantity, Number(item.price) * item.quantity * 100, item.note]);
+                for (const item of items) { const price = activePrice(item); await tx.run('INSERT INTO order_items (order_id, cart_item_id, product_id, title, variant, size, unit_price_kobo, quantity, line_total_kobo, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [order.lastInsertRowid, item.cart_item_id, item.product_id, item.title, item.variant, item.size, price * 100, item.quantity, price * item.quantity * 100, item.note]); }
             });
         }
         console.log(`[Paystack] Initializing order ${orderReference}; amount=${amountKobo}; callback=${paystackCallbackUrl}`);
@@ -163,7 +278,18 @@ const finalizePayment = async (paymentData) => {
     const paid = transaction.status === 'success' && transaction.reference === (order.paystack_reference || order.order_reference) && Number(transaction.amount) === Number(order.amount_kobo) && transaction.currency === 'NGN';
     await db.transaction(async (tx) => {
         await tx.run('UPDATE orders SET status = ?, payment_status = ?, paystack_transaction_id = ?, amount_paid_kobo = ?, paid_at = CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE paid_at END WHERE id = ?', [paid ? 'paid' : 'failed', paid ? 'success' : 'failed', String(transaction.id || ''), Number(transaction.amount) || 0, paid ? 1 : 0, order.id]);
-        if (paid) await tx.run('DELETE FROM cart_items WHERE user_id = ? AND id IN (SELECT cart_item_id FROM order_items WHERE order_id = ?)', [order.user_id, order.id]);
+        if (paid) {
+            const items = await tx.all('SELECT product_id, variant, quantity FROM order_items WHERE order_id = ?', [order.id]);
+            for (const item of items) {
+                const product = await tx.get('SELECT * FROM products WHERE id = ?', [item.product_id]);
+                const options = productOptions(product);
+                const variant = options.find((option) => option.image === item.variant);
+                if (!variant || variant.stock < item.quantity) throw new Error('Payment succeeded but stock is no longer available.');
+                variant.stock -= item.quantity;
+                await tx.run('UPDATE products SET options_json = ?, stock = ? WHERE id = ?', [JSON.stringify(options), options.reduce((total, option) => total + option.stock, 0), item.product_id]);
+            }
+            await tx.run('DELETE FROM cart_items WHERE user_id = ? AND id IN (SELECT cart_item_id FROM order_items WHERE order_id = ?)', [order.user_id, order.id]);
+        }
     });
     return db.get('SELECT * FROM orders WHERE id = ?', [order.id]);
 };
@@ -179,12 +305,22 @@ app.use((error, request, response, next) => {
 });
 
 const seedProducts = async () => {
-    const sql = db.client === 'mysql' ? 'INSERT INTO products (id, title, description, price, sizes_json, options_json) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE title=VALUES(title), description=VALUES(description), price=VALUES(price), sizes_json=VALUES(sizes_json), options_json=VALUES(options_json)' : 'INSERT OR REPLACE INTO products (id, title, description, price, sizes_json, options_json) VALUES (?, ?, ?, ?, ?, ?)';
+    const sql = db.client === 'mysql' ? 'INSERT INTO products (id, title, description, price, sizes_json, options_json) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE title=VALUES(title), description=VALUES(description), sizes_json=VALUES(sizes_json), options_json=VALUES(options_json)' : 'INSERT OR IGNORE INTO products (id, title, description, price, sizes_json, options_json) VALUES (?, ?, ?, ?, ?, ?)';
     for (const [id, title, description, price, sizes, options] of productSeed) await db.run(sql, [id, title, description, price, JSON.stringify(sizes), JSON.stringify(options.map(([label, image]) => ({ label, image, price })))]);
+};
+const provisionOwner = async () => {
+    const email = (process.env.OWNER_EMAIL || '').trim().toLowerCase();
+    const password = process.env.OWNER_PASSWORD || '';
+    if (!email || password.length < 6) return;
+    const hash = await bcrypt.hash(password, 12);
+    const existing = await db.get('SELECT id FROM users WHERE email = ?', [email]);
+    if (existing) await db.run('UPDATE users SET password_hash = ?, role = ? WHERE id = ?', [hash, 'owner', existing.id]);
+    else await db.run('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)', ['Store Owner', email, hash, 'owner']);
 };
 const start = async () => {
     await db.init();
     await seedProducts();
+    await provisionOwner();
     console.log(`[Paystack] secret configured: ${hasUsablePaystackSecret}; callback: ${paystackCallbackUrl}`);
     if (process.env.NODE_ENV === 'production' && paystackCallbackUrl.includes('localhost')) console.warn('[Paystack] Production callback URL points to localhost. Set PAYSTACK_CALLBACK_URL to the public confirmation URL.');
     app.listen(port, host, () => console.log(`arhyXL server running on http://localhost:${port}`));
