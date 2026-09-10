@@ -76,7 +76,7 @@ OWNER_PASSWORD=use-a-private-password-at-least-6-characters
 
 Do not use `localhost` in `FRONTEND_ORIGIN` or `PAYSTACK_CALLBACK_URL` after publishing. Redeploy the Railway service after changing variables. The backend health endpoint should return `paystackConfigured: true` and `ownerConfigured: true`.
 
-The owner profile is created automatically in the database during backend startup. Nobody should sign up as an owner. Railway Variables must include `OWNER_EMAIL` and `OWNER_PASSWORD`; the local `.env` file is ignored by Git and is never copied to Railway.
+The owner profile is created automatically in the database during backend startup. Nobody should sign up as an owner. Railway Variables must include `OWNER_EMAIL` and `OWNER_PASSWORD`; the local `.env` file is ignored by Git and is never copied to Railway. If those two variables are temporarily missing, the storefront still starts, but owner login returns a configuration message until they are added and the service is redeployed.
 
 ## Vercel frontend
 

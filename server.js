@@ -339,7 +339,7 @@ const start = async () => {
     await db.init();
     await seedProducts();
     await provisionOwner();
-    if (process.env.NODE_ENV === 'production' && !hasConfiguredOwner) throw new Error('Missing OWNER_EMAIL or OWNER_PASSWORD. Add both as Railway Variables before deploying.');
+    if (!hasConfiguredOwner) console.warn('[Owner] profile not provisioned: set OWNER_EMAIL and OWNER_PASSWORD in the backend environment.');
     console.log(`[Paystack] secret configured: ${hasUsablePaystackSecret}; callback: ${paystackCallbackUrl}`);
     if (process.env.NODE_ENV === 'production' && paystackCallbackUrl.includes('localhost')) console.warn('[Paystack] Production callback URL points to localhost. Set PAYSTACK_CALLBACK_URL to the public confirmation URL.');
     app.listen(port, host, () => console.log(`arhyXL server running on http://localhost:${port}`));
