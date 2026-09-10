@@ -308,11 +308,22 @@
                     ? `<span class="old-price">${formatPrice(liveProduct.originalPrice)}</span><strong>${formatPrice(liveProduct.price)}</strong><span class="discount-badge">-${liveProduct.discountPercent}%</span>`
                     : formatPrice(liveProduct.price);
             };
+            const applyLiveVariantState = (liveProduct) => {
+                liveProduct.options.forEach((liveOption) => {
+                    const optionEl = Array.from(colorSelect.options).find((item) => item.value === liveOption.image);
+                    if (optionEl) {
+                        optionEl.disabled = !liveOption.available;
+                        optionEl.textContent = liveOption.available ? liveOption.label : `${liveOption.label} - unavailable`;
+                    }
+                });
+                const selectedLiveOption = liveProduct.options.find((option) => option.image === colorSelect.value);
+                document.querySelector('.availability-text').textContent = selectedLiveOption?.available ? (selectedLiveOption.lowStock ? 'Low stock' : 'In stock') : 'Out of stock';
+                document.getElementById('add-to-cart').disabled = !selectedLiveOption?.available;
+            };
             apiRequest(`/products/${encodeURIComponent(productId)}`).then((liveProduct) => {
                 livePrice = liveProduct.price;
                 renderLivePrice(liveProduct);
-                document.querySelector('.availability-text').textContent = liveProduct.available ? (liveProduct.lowStock ? 'Low stock' : 'In stock') : 'Out of stock';
-                document.getElementById('add-to-cart').disabled = !liveProduct.available;
+                applyLiveVariantState(liveProduct);
             }).catch(() => {});
 
             const colorSelect = document.getElementById('detail-color');
@@ -360,6 +371,7 @@
                     image.src = nextOption.value;
                     image.alt = nextOption.label;
                     document.getElementById('detail-price').textContent = formatPrice(livePrice);
+                    apiRequest(`/products/${encodeURIComponent(productId)}`).then(applyLiveVariantState).catch(() => {});
                 }
             });
 

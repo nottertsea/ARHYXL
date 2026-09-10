@@ -20,20 +20,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         const price = document.getElementById(select.dataset.priceTarget);
         const pickButton = card ? card.querySelector('.product-pick, a[href*="product.html"]') : null;
         const product = card ? liveProducts.get(card.dataset.productId) : null;
+        const availability = product ? document.createElement('small') : null;
+        if (availability) {
+            availability.className = 'stock-note';
+            price?.parentElement.appendChild(availability);
+        }
         const updateSelection = () => {
             const option = select.options[select.selectedIndex];
+            const liveOption = product?.options.find((item) => item.image === option.value);
             if (image) { image.src = option.value; image.alt = option.textContent; }
             if (product) renderPrice(price, product);
             else if (price) price.textContent = option.dataset.price || price.textContent;
             if (pickButton && card.dataset.productId) pickButton.href = `product.html?product=${card.dataset.productId}&variant=${encodeURIComponent(option.value)}`;
+            if (availability) {
+                availability.textContent = liveOption?.available ? (liveOption.lowStock ? 'Low stock' : 'In stock') : 'Currently unavailable';
+                pickButton?.classList.toggle('is-unavailable', !liveOption?.available);
+            }
         };
         if (product) {
             renderPrice(price, product);
-            const availability = document.createElement('small');
-            availability.className = 'stock-note';
-            availability.textContent = product.available ? (product.lowStock ? 'Low stock' : 'In stock') : 'Currently unavailable';
-            price?.parentElement.appendChild(availability);
-            if (pickButton && !product.available) pickButton.classList.add('is-unavailable');
         }
         select.addEventListener('change', updateSelection);
         updateSelection();
