@@ -70,7 +70,7 @@ MYSQL_PORT=3306
 MYSQL_DATABASE=YOUR_MYSQL_DATABASE
 MYSQL_USER=YOUR_MYSQL_USER
 MYSQL_PASSWORD=YOUR_MYSQL_PASSWORD
-OWNER_EMAIL=your-owner-email@example.com
+OWNER_EMAIL=heistertsea@outlook.com
 OWNER_PASSWORD=use-a-private-password-at-least-6-characters
 ```
 
