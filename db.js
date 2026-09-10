@@ -4,6 +4,14 @@ const mysql = require('mysql2/promise');
 const sqlite3 = require('sqlite3').verbose();
 
 const client = (process.env.DB_CLIENT || 'sqlite').toLowerCase();
+const mysqlConfig = {
+    host: process.env.MYSQL_HOST || process.env.MYSQLHOST,
+    port: Number(process.env.MYSQL_PORT || process.env.MYSQLPORT || 3306),
+    database: process.env.MYSQL_DATABASE || process.env.MYSQLDATABASE,
+    user: process.env.MYSQL_USER || process.env.MYSQLUSER,
+    password: process.env.MYSQL_PASSWORD || process.env.MYSQLPASSWORD,
+    ssl: process.env.MYSQL_SSL === 'true' || process.env.MYSQLSSL === 'true' ? {} : undefined
+};
 let pool;
 let sqlite;
 
@@ -23,13 +31,10 @@ const db = {
     client,
     async init() {
         if (client === 'mysql') {
+            const missing = ['host', 'database', 'user', 'password'].filter((key) => !mysqlConfig[key]);
+            if (missing.length) throw new Error(`Missing MySQL configuration: ${missing.join(', ')}. Set Railway MYSQLHOST/MYSQLDATABASE/MYSQLUSER/MYSQLPASSWORD variables.`);
             pool = mysql.createPool({
-                host: process.env.MYSQL_HOST,
-                port: Number(process.env.MYSQL_PORT || 3306),
-                database: process.env.MYSQL_DATABASE,
-                user: process.env.MYSQL_USER,
-                password: process.env.MYSQL_PASSWORD,
-                ssl: process.env.MYSQL_SSL === 'true' ? {} : undefined,
+                ...mysqlConfig,
                 waitForConnections: true,
                 connectionLimit: 10,
                 queueLimit: 0,

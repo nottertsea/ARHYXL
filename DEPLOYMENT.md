@@ -80,6 +80,8 @@ Do not use `localhost` in `FRONTEND_ORIGIN` or `PAYSTACK_CALLBACK_URL` after pub
 
 The owner profile is created automatically in the database during backend startup. Nobody should sign up as an owner. Railway Variables must include `OWNER_EMAIL` and `OWNER_PASSWORD`; the local `.env` file is ignored by Git and is never copied to Railway. If those two variables are temporarily missing, the storefront still starts, but owner login returns a configuration message until they are added and the service is redeployed.
 
+The backend accepts Railway's native MySQL variables (`MYSQLHOST`, `MYSQLPORT`, `MYSQLDATABASE`, `MYSQLUSER`, `MYSQLPASSWORD`) as well as the app names (`MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`). The Railway-native names are used automatically when present.
+
 After the first deploy, open Railway's service **Variables** tab and add the two owner variables directly there. GitHub cannot carry the local `.env` file, and the password must not be committed to the repository. Then redeploy and open `/owner.html` on the Railway service domain.
 
 ## Vercel frontend
