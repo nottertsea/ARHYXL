@@ -23,6 +23,10 @@
             <div class="owner-status"><span>Payment gateway</span><strong id="paystack-status">Checking...</strong></div>
         </section>
         <p id="owner-status" class="form-status" role="status"></p>
+        <section class="owner-orders-panel owner-product">
+            <div class="owner-product-heading"><div><h2>Orders awaiting delivery</h2><p>Move paid orders through processing, shipped, delivered, or returned.</p></div></div>
+            <div id="owner-orders" class="owner-orders"></div>
+        </section>
         <section class="owner-product owner-create-panel">
             <div class="owner-product-heading"><div><h2>Add a product</h2><p>Create a new item with its first picture and variant.</p></div></div>
             <form id="create-product-form" class="owner-create-form">
@@ -51,10 +55,16 @@
                 if (!health.ownerConfigured) throw new Error('Owner profile is not configured. Add OWNER_EMAIL and OWNER_PASSWORD to Railway Variables, then redeploy.');
                 document.getElementById('paystack-status').textContent = health.paystackConfigured ? 'Ready' : 'Add a Paystack secret key';
                 renderProducts(await apiRequest('/admin/products'));
+                renderOrders(await apiRequest('/admin/orders'));
             } catch (error) {
                 if (error.status === 401 || error.status === 403) showLogin();
                 else statusElement.textContent = error.message;
             }
+        };
+        const renderOrders = (orders) => {
+            const ordersElement = document.getElementById('owner-orders');
+            ordersElement.innerHTML = orders.length ? orders.map((order) => `<article class="owner-order-row"><div><strong>${escapeHtml(order.order_reference)}</strong><small>${escapeHtml(order.customer_name)} · ${escapeHtml(order.customer_email)}</small><small>${escapeHtml(order.delivery_address)}</small><div class="owner-order-items">${order.items.map((item) => `<span>${escapeHtml(item.title)} · ${escapeHtml(item.variant)} · ${escapeHtml(item.size)} · ${item.quantity} x ${formatNaira(Number(item.unit_price_kobo) / 100)}</span>`).join('')}</div></div><div class="owner-order-actions"><strong>${formatNaira(Number(order.amount_kobo) / 100)}</strong><select class="order-status-select" data-reference="${escapeHtml(order.order_reference)}"><option value="processing" ${order.status === 'processing' ? 'selected' : ''}>Processing</option><option value="shipped" ${order.status === 'shipped' ? 'selected' : ''}>Shipped</option><option value="delivered" ${order.status === 'delivered' ? 'selected' : ''}>Delivered</option><option value="returned" ${order.status === 'returned' ? 'selected' : ''}>Returned</option></select><small class="order-status-save" role="status"></small></div></article>`).join('') : '<p class="page-text">No orders yet.</p>';
+            ordersElement.querySelectorAll('.order-status-select').forEach((select) => select.addEventListener('change', async () => { const statusElement = select.nextElementSibling; statusElement.textContent = 'Saving...'; try { await apiRequest(`/admin/orders/${encodeURIComponent(select.dataset.reference)}/status`, { method: 'PATCH', body: JSON.stringify({ status: select.value }) }); statusElement.textContent = 'Saved'; } catch (error) { statusElement.textContent = error.message; } }));
         };
         const renderProducts = (products) => {
             productList.innerHTML = products.map((product) => `<form class="owner-product" data-product-id="${escapeHtml(product.id)}">

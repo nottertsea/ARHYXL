@@ -394,6 +394,55 @@ img {
     text-transform: capitalize;
 }
 
+.owner-orders-panel {
+    margin-bottom: 24px;
+}
+
+.owner-orders,
+.owner-order-items,
+.account-order-items {
+    display: grid;
+    gap: 6px;
+}
+
+.owner-order-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 16px 0;
+    border-top: 1px solid #eadfce;
+}
+
+.owner-order-row > div:first-child,
+.owner-order-actions {
+    display: grid;
+    gap: 6px;
+}
+
+.owner-order-row small,
+.owner-order-items span,
+.account-order-items span {
+    color: #6f6257;
+    font-size: 0.85rem;
+}
+
+.owner-order-actions {
+    min-width: 150px;
+    align-content: start;
+    justify-items: end;
+}
+
+.order-status-select {
+    padding: 8px;
+    border: 1px solid #d7c0a2;
+    border-radius: 8px;
+    font: inherit;
+}
+
+.order-status-save {
+    color: #477044;
+}
+
 .account-layout {
     display: grid;
     grid-template-columns: 220px minmax(0, 1fr);

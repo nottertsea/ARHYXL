@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS orders (
     order_reference VARCHAR(100) NOT NULL UNIQUE,
     idempotency_key VARCHAR(120) NOT NULL UNIQUE,
     user_id BIGINT UNSIGNED NOT NULL,
-    status ENUM('pending', 'paid', 'failed', 'cancelled', 'abandoned') NOT NULL DEFAULT 'pending',
+    status ENUM('pending', 'paid', 'processing', 'shipped', 'delivered', 'returned', 'failed', 'cancelled', 'abandoned') NOT NULL DEFAULT 'pending',
     payment_status ENUM('pending', 'success', 'failed', 'cancelled', 'abandoned') NOT NULL DEFAULT 'pending',
     paystack_reference VARCHAR(100) UNIQUE,
     authorization_url TEXT,

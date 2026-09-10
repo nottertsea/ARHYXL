@@ -107,6 +107,7 @@ async function migrateMysql(connection) {
     for (const statement of additions) {
         try { await connection.query(statement); } catch (error) { if (error.code !== 'ER_DUP_FIELDNAME') throw error; }
     }
+    try { await connection.query("ALTER TABLE orders MODIFY status ENUM('pending', 'paid', 'processing', 'shipped', 'delivered', 'returned', 'failed', 'cancelled', 'abandoned') NOT NULL DEFAULT 'pending'"); } catch (error) { if (error.code !== 'ER_DUP_FIELD') throw error; }
 }
 
 module.exports = db;
