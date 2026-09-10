@@ -323,7 +323,7 @@ app.use((error, request, response, next) => {
 });
 
 const seedProducts = async () => {
-    const sql = db.client === 'mysql' ? 'INSERT INTO products (id, title, description, price, sizes_json, options_json) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE title=VALUES(title), description=VALUES(description), sizes_json=VALUES(sizes_json), options_json=VALUES(options_json)' : 'INSERT OR IGNORE INTO products (id, title, description, price, sizes_json, options_json) VALUES (?, ?, ?, ?, ?, ?)';
+    const sql = db.client === 'mysql' ? 'INSERT INTO products (id, title, description, price, sizes_json, options_json) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE title=VALUES(title), description=VALUES(description), sizes_json=VALUES(sizes_json)' : 'INSERT OR IGNORE INTO products (id, title, description, price, sizes_json, options_json) VALUES (?, ?, ?, ?, ?, ?)';
     for (const [id, title, description, price, sizes, options] of productSeed) await db.run(sql, [id, title, description, price, JSON.stringify(sizes), JSON.stringify(options.map(([label, image]) => ({ label, image, price })))]);
 };
 const provisionOwner = async () => {

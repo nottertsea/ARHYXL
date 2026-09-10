@@ -81,7 +81,7 @@
             const saveStatus = form.querySelector('.owner-save-status');
             const body = Object.fromEntries(new FormData(form).entries());
             saveStatus.textContent = 'Saving...';
-            try { await apiRequest(`/admin/products/${encodeURIComponent(form.dataset.productId)}`, { method: 'PATCH', body: JSON.stringify({ price: Number(body.price), stock: Number(body.stock), discountPercent: Number(body.discountPercent) }) }); saveStatus.textContent = 'Saved'; } catch (error) { saveStatus.textContent = error.message; }
+            try { await apiRequest(`/admin/products/${encodeURIComponent(form.dataset.productId)}`, { method: 'PATCH', body: JSON.stringify({ price: Number(body.price), discountPercent: Number(body.discountPercent) }) }); saveStatus.textContent = 'Saved'; } catch (error) { saveStatus.textContent = error.message; }
         };
         document.getElementById('logout-button').addEventListener('click', async () => { try { await apiRequest('/auth/logout', { method: 'POST' }); } finally { clearSession(); window.location.href = 'index.html'; } });
         loadOwner();
