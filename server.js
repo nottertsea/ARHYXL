@@ -13,6 +13,8 @@ const frontendOrigin = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
 const paystackCallbackUrl = process.env.PAYSTACK_CALLBACK_URL || `${frontendOrigin}/confirmation.html`;
 const hasUsablePaystackSecret = /^sk_(test|live)_[A-Za-z0-9]+$/.test(paystackSecretKey);
 const configuredOwnerEmail = (process.env.OWNER_EMAIL || '').trim().toLowerCase();
+const ownerPassword = process.env.OWNER_PASSWORD || '';
+const hasConfiguredOwner = /^\S+@\S+\.\S+$/.test(configuredOwnerEmail) && ownerPassword.length >= 6;
 
 const productSeed = [
     ['vans', 'Vans', 'Classic skate-inspired shoes with a timeless silhouette.', 35000, ['41', '42', '43', '44', '45', '46'], [['Classic', 'Vans.jpeg'], ['Black & White', 'vansblackandwhite.jpeg'], ['All Black', 'vansallblack.jpeg'], ['Blue & Black', 'vansblueandblack.jpeg'], ['Brown', 'vansbrown.jpeg'], ['Green', 'vansgreen.jpeg'], ['Red', 'vansred.jpeg'], ['Red & Black', 'vansredandblack.jpeg']]],
@@ -91,7 +93,7 @@ app.use((request, response, next) => {
 app.use((request, response, next) => /^\/(?:arhyxl\.sqlite|schema\.sql|mysql-schema\.sql|server\.js|db\.js|package(?:-lock)?\.json|node_modules)(?:\/|$)/.test(request.path) ? response.sendStatus(404) : next());
 app.use(express.static(__dirname));
 
-app.get('/api/health', (request, response) => response.json({ ok: true, database: db.client, paystackConfigured: hasUsablePaystackSecret }));
+app.get('/api/health', (request, response) => response.json({ ok: true, database: db.client, paystackConfigured: hasUsablePaystackSecret, ownerConfigured: hasConfiguredOwner }));
 app.get('/api/products', async (request, response, next) => { try { response.json((await db.all('SELECT * FROM products ORDER BY title')).map(publicProduct)); } catch (error) { next(error); } });
 app.get('/api/products/:id', async (request, response, next) => { try { const product = await db.get('SELECT * FROM products WHERE id = ?', [request.params.id]); if (!product) return response.status(404).json({ error: 'Product not found.' }); return response.json(publicProduct(product)); } catch (error) { next(error); } });
 
@@ -122,6 +124,7 @@ app.post('/api/auth/login', async (request, response, next) => {
 app.post('/api/auth/owner-login', async (request, response, next) => {
     try {
         const { email, password } = request.body || {};
+        if (!hasConfiguredOwner) return response.status(503).json({ error: 'Store owner profile is not configured on the backend. Add OWNER_EMAIL and OWNER_PASSWORD in Railway Variables, then redeploy.' });
         if (!configuredOwnerEmail || String(email || '').trim().toLowerCase() !== configuredOwnerEmail) return response.status(401).json({ error: 'Use the configured store owner email.' });
         const emailQuery = db.client === 'mysql' ? 'SELECT * FROM users WHERE email = ?' : 'SELECT * FROM users WHERE email = ? COLLATE NOCASE';
         const user = await db.get(emailQuery, [configuredOwnerEmail]);
@@ -325,9 +328,8 @@ const seedProducts = async () => {
 };
 const provisionOwner = async () => {
     const email = configuredOwnerEmail;
-    const password = process.env.OWNER_PASSWORD || '';
-    if (!email || password.length < 6) return;
-    const hash = await bcrypt.hash(password, 12);
+    if (!hasConfiguredOwner) return;
+    const hash = await bcrypt.hash(ownerPassword, 12);
     await db.run('UPDATE users SET role = ? WHERE role = ?', ['customer', 'owner']);
     const existing = await db.get('SELECT id FROM users WHERE email = ?', [email]);
     if (existing) await db.run('UPDATE users SET password_hash = ?, role = ? WHERE id = ?', [hash, 'owner', existing.id]);
@@ -337,6 +339,7 @@ const start = async () => {
     await db.init();
     await seedProducts();
     await provisionOwner();
+    if (process.env.NODE_ENV === 'production' && !hasConfiguredOwner) throw new Error('Missing OWNER_EMAIL or OWNER_PASSWORD. Add both as Railway Variables before deploying.');
     console.log(`[Paystack] secret configured: ${hasUsablePaystackSecret}; callback: ${paystackCallbackUrl}`);
     if (process.env.NODE_ENV === 'production' && paystackCallbackUrl.includes('localhost')) console.warn('[Paystack] Production callback URL points to localhost. Set PAYSTACK_CALLBACK_URL to the public confirmation URL.');
     app.listen(port, host, () => console.log(`arhyXL server running on http://localhost:${port}`));

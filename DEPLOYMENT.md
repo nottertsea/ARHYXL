@@ -70,9 +70,13 @@ MYSQL_PORT=3306
 MYSQL_DATABASE=YOUR_MYSQL_DATABASE
 MYSQL_USER=YOUR_MYSQL_USER
 MYSQL_PASSWORD=YOUR_MYSQL_PASSWORD
+OWNER_EMAIL=your-owner-email@example.com
+OWNER_PASSWORD=use-a-private-password-at-least-6-characters
 ```
 
-Do not use `localhost` in `FRONTEND_ORIGIN` or `PAYSTACK_CALLBACK_URL` after publishing. Redeploy the Railway service after changing variables. The backend health endpoint should return `paystackConfigured: true`.
+Do not use `localhost` in `FRONTEND_ORIGIN` or `PAYSTACK_CALLBACK_URL` after publishing. Redeploy the Railway service after changing variables. The backend health endpoint should return `paystackConfigured: true` and `ownerConfigured: true`.
+
+The owner profile is created automatically in the database during backend startup. Nobody should sign up as an owner. Railway Variables must include `OWNER_EMAIL` and `OWNER_PASSWORD`; the local `.env` file is ignored by Git and is never copied to Railway.
 
 ## Vercel frontend
 

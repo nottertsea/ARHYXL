@@ -48,6 +48,7 @@
                 if (me.user.role !== 'owner') throw new Error('Owner access required.');
                 document.getElementById('owner-name').textContent = `${me.user.name} (${me.user.email})`;
                 const health = await apiRequest('/health');
+                if (!health.ownerConfigured) throw new Error('Owner profile is not configured. Add OWNER_EMAIL and OWNER_PASSWORD to Railway Variables, then redeploy.');
                 document.getElementById('paystack-status').textContent = health.paystackConfigured ? 'Ready' : 'Add a Paystack secret key';
                 renderProducts(await apiRequest('/admin/products'));
             } catch (error) {
