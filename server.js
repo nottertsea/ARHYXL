@@ -116,7 +116,6 @@ app.post('/api/auth/login', async (request, response, next) => {
         const user = await db.get(emailQuery, [email || '']);
         if (!user || !(await bcrypt.compare(password || '', user.password_hash))) return response.status(401).json({ error: 'Invalid email or password.' });
         if (user.role === 'owner') return response.status(403).json({ error: 'Use the store owner sign-in.' });
-        if (await db.get('SELECT 1 FROM sessions WHERE user_id = ? LIMIT 1', [user.id])) return response.status(409).json({ error: 'This account is already logged in. Log out first.' });
         const token = crypto.randomBytes(32).toString('hex');
         await db.run('INSERT INTO sessions (token, user_id) VALUES (?, ?)', [token, user.id]);
         return response.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
@@ -130,7 +129,6 @@ app.post('/api/auth/owner-login', async (request, response, next) => {
         const emailQuery = db.client === 'mysql' ? 'SELECT * FROM users WHERE email = ?' : 'SELECT * FROM users WHERE email = ? COLLATE NOCASE';
         const user = await db.get(emailQuery, [configuredOwnerEmail]);
         if (!user || user.role !== 'owner' || !(await bcrypt.compare(password || '', user.password_hash))) return response.status(401).json({ error: 'Invalid owner email or password.' });
-        if (await db.get('SELECT 1 FROM sessions WHERE user_id = ? LIMIT 1', [user.id])) return response.status(409).json({ error: 'This owner account is already logged in. Log out first.' });
         const token = crypto.randomBytes(32).toString('hex');
         await db.run('INSERT INTO sessions (token, user_id) VALUES (?, ?)', [token, user.id]);
         return response.json({ token, user: { id: user.id, name: user.name, email: user.email, role: 'owner' } });
