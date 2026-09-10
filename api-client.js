@@ -9,7 +9,7 @@ const apiRequest = async (path, options = {}) => {
     const token = getAuthToken();
     if (token) headers.Authorization = `Bearer ${token}`;
 
-    const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    const response = await fetch(`${API_BASE}${path}`, { ...options, headers, ...(options.method ? {} : { cache: 'no-store' }) });
     const contentType = response.headers.get('content-type') || '';
     const data = contentType.includes('application/json') ? await response.json() : null;
     if (!response.ok) {
@@ -73,6 +73,13 @@ const updateAuthAction = async () => {
             accountLink.href = 'account.html';
             accountLink.textContent = 'Account';
             actions.prepend(accountLink);
+        }
+        if (data.user.role === 'owner' && !actions.querySelector('a[href="owner.html"]')) {
+            const ownerLink = document.createElement('a');
+            ownerLink.className = 'btn btn-outline';
+            ownerLink.href = 'owner.html';
+            ownerLink.textContent = 'Owner';
+            actions.prepend(ownerLink);
         }
 
         const logoutLink = signupLink || loginLink;

@@ -81,6 +81,7 @@ const paystackRequest = async (endpoint, options = {}) => {
 app.use('/api/paystack/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '1mb' }));
 app.use((request, response, next) => {
+    if (request.path.startsWith('/api/')) response.setHeader('Cache-Control', 'no-store');
     const origin = request.get('origin');
     const allowed = frontendOrigin.split(',').map((value) => value.trim());
     if (origin && (origin === 'null' || allowed.includes(origin))) response.setHeader('Access-Control-Allow-Origin', origin);
