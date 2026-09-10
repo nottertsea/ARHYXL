@@ -269,10 +269,19 @@ app.post('/api/orders/initialize', requireUser, async (request, response, next) 
             orderReference = prior.order_reference;
         } else {
             orderReference = `ARHYXL-${Date.now()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
-            await db.transaction(async (tx) => {
-                const order = await tx.run('INSERT INTO orders (order_reference, idempotency_key, user_id, amount_kobo, customer_name, customer_email, customer_phone, delivery_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [orderReference, idempotencyKey, request.user.id, amountKobo, name.trim(), email.trim().toLowerCase(), phone.trim(), address.trim()]);
-                for (const item of items) { const price = activePrice(item); await tx.run('INSERT INTO order_items (order_id, cart_item_id, product_id, title, variant, size, unit_price_kobo, quantity, line_total_kobo, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [order.lastInsertRowid, item.cart_item_id, item.product_id, item.title, item.variant, item.size, price * 100, item.quantity, price * item.quantity * 100, item.note]); }
-            });
+            try {
+                await db.transaction(async (tx) => {
+                    const order = await tx.run('INSERT INTO orders (order_reference, idempotency_key, user_id, amount_kobo, customer_name, customer_email, customer_phone, delivery_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [orderReference, idempotencyKey, request.user.id, amountKobo, name.trim(), email.trim().toLowerCase(), phone.trim(), address.trim()]);
+                    for (const item of items) { const price = activePrice(item); await tx.run('INSERT INTO order_items (order_id, cart_item_id, product_id, title, variant, size, unit_price_kobo, quantity, line_total_kobo, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [order.lastInsertRowid, item.cart_item_id, item.product_id, item.title, item.variant, item.size, price * 100, item.quantity, price * item.quantity * 100, item.note]); }
+                });
+            } catch (error) {
+                const duplicate = error.code === 'ER_DUP_ENTRY' || error.code === 'SQLITE_CONSTRAINT_UNIQUE' || error.code === 'SQLITE_CONSTRAINT_PRIMARYKEY';
+                if (!duplicate) throw error;
+                const existingOrder = await db.get('SELECT * FROM orders WHERE user_id = ? AND idempotency_key = ?', [request.user.id, idempotencyKey]);
+                if (!existingOrder || Number(existingOrder.amount_kobo) !== amountKobo) return response.status(409).json({ error: 'This checkout attempt already exists with different cart details. Start checkout again.' });
+                orderReference = existingOrder.order_reference;
+                if (existingOrder.paystack_reference && existingOrder.authorization_url) return response.json({ orderReference, amountKobo, authorizationUrl: existingOrder.authorization_url, message: 'This checkout attempt already exists.' });
+            }
         }
         console.log(`[Paystack] Initializing order ${orderReference}; amount=${amountKobo}; callback=${paystackCallbackUrl}`);
         const payment = await paystackRequest('/transaction/initialize', { method: 'POST', body: JSON.stringify({ amount: amountKobo, email: email.trim().toLowerCase(), reference: orderReference, callback_url: paystackCallbackUrl, metadata: { orderReference } }) });
