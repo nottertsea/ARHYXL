@@ -303,6 +303,12 @@ img {
     text-overflow: ellipsis;
 }
 
+.variant-save-status {
+    min-height: 1em;
+    color: #477044;
+    font-size: 0.78rem;
+}
+
 .owner-add-variant {
     display: flex;
     gap: 8px;
