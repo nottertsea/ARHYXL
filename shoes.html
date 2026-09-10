@@ -287,65 +287,37 @@
 
     <script src="api-client.js"></script>
     <script>
-        const variantSelects = document.querySelectorAll('.product-variant');
-
-        function bindVariant(select) {
-            if (!select) return;
-
-            const image = document.getElementById(select.dataset.imageTarget);
-            const price = document.getElementById(select.dataset.priceTarget);
-            const card = select.closest('.product-card');
-            const pickButton = card?.querySelector('.btn-outline');
-
-            if (!image || !price) return;
-
-            const applyVariant = (selected) => {
-                const imagePath = selected.getAttribute('data-image') || selected.value;
-                const nextPrice = selected.getAttribute('data-price') || price.textContent;
-                const nextAlt = selected.textContent.trim();
-
-                image.style.opacity = '0.7';
-                const nextImage = new Image();
-                nextImage.onload = () => {
-                    image.src = imagePath;
-                    image.alt = nextAlt;
-                    price.textContent = nextPrice;
-                    image.style.opacity = '1';
+        const formatPrice = (value) => new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(value);
+        const renderPrice = (element, product) => {
+            if (!element) return;
+            element.innerHTML = product.discountPercent > 0 ? `<span class="old-price">${formatPrice(product.originalPrice)}</span><strong>${formatPrice(product.price)}</strong><span class="discount-badge">-${product.discountPercent}%</span>` : formatPrice(product.price);
+        };
+        const loadLiveVariants = async () => {
+            const products = new Map((await apiRequest('/products')).map((product) => [product.id, product]));
+            document.querySelectorAll('.product-variant').forEach((select) => {
+                const card = select.closest('.product-card');
+                const product = products.get(card?.dataset.productId);
+                const image = document.getElementById(select.dataset.imageTarget);
+                const price = document.getElementById(select.dataset.priceTarget);
+                const pickButton = card?.querySelector('.btn-outline');
+                const availability = card?.querySelector('.availability-text') || document.createElement('p');
+                availability.className = 'availability-text stock-note';
+                if (!availability.parentElement) price?.parentNode.insertBefore(availability, price);
+                const applyVariant = () => {
+                    const option = select.options[select.selectedIndex];
+                    const liveVariant = product?.options.find((item) => item.image === option.value);
+                    image.src = option.value;
+                    image.alt = option.textContent;
+                    if (product) renderPrice(price, product);
+                    availability.textContent = liveVariant?.available ? (liveVariant.lowStock ? 'Low stock' : 'In stock') : 'Currently unavailable';
+                    pickButton.href = `product.html?product=${card.dataset.productId}&variant=${encodeURIComponent(option.value)}`;
+                    pickButton.classList.toggle('is-unavailable', !liveVariant?.available);
                 };
-                nextImage.onerror = () => {
-                    image.src = imagePath;
-                    image.alt = nextAlt;
-                    price.textContent = nextPrice;
-                    image.style.opacity = '1';
-                };
-                nextImage.src = imagePath;
-
-                if (pickButton && card?.dataset.productId) {
-                    const nextVariant = encodeURIComponent(imagePath);
-                    pickButton.href = `product.html?product=${card.dataset.productId}&variant=${nextVariant}`;
-                }
-            };
-
-            select.addEventListener('change', () => {
-                applyVariant(select.options[select.selectedIndex]);
+                select.addEventListener('change', applyVariant);
+                applyVariant();
             });
-
-            applyVariant(select.options[select.selectedIndex]);
-        }
-
-        variantSelects.forEach(bindVariant);
-
-        document.querySelectorAll('.product-card').forEach((card) => {
-            if (!card.querySelector('.availability-text')) {
-                const availability = document.createElement('p');
-                availability.className = 'availability-text';
-                availability.textContent = 'Available now';
-                const price = card.querySelector('.price');
-                if (price) {
-                    price.parentNode.insertBefore(availability, price);
-                }
-            }
-        });
+        };
+        loadLiveVariants().catch((error) => console.error('Unable to load live inventory:', error));
     </script>
 </body>
 </html>
