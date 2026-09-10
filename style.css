@@ -426,6 +426,27 @@ img {
     font-size: 0.85rem;
 }
 
+.owner-order-item,
+.account-order-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.owner-order-item img,
+.account-order-item img {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+.owner-order-item > span,
+.account-order-item > span {
+    display: grid;
+    gap: 3px;
+}
+
 .owner-order-actions {
     min-width: 150px;
     align-content: start;
