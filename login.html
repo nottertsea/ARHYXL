@@ -23,9 +23,9 @@
 
     <main class="auth-shell">
         <section class="auth-card">
-            <p class="eyebrow">Welcome back</p>
-            <h1>Log in to arhyXL</h1>
-            <p class="page-text">Access your account and continue shopping.</p>
+            <p class="eyebrow" id="login-eyebrow">Welcome back</p>
+            <h1 id="login-title">Log in to arhyXL</h1>
+            <p class="page-text" id="login-copy">Access your account and continue shopping.</p>
             <form id="login-form" class="auth-form">
                 <label for="login-email">Email address</label>
                 <input id="login-email" type="email" required autocomplete="email">
@@ -42,7 +42,15 @@
     <script src="api-client.js"></script>
     <script>
         const loginStatus = document.getElementById('login-status');
-        const nextPage = new URLSearchParams(window.location.search).get('next') || 'index.html';
+        const loginParams = new URLSearchParams(window.location.search);
+        const ownerMode = loginParams.get('owner') === '1';
+        const nextPage = loginParams.get('next') || 'index.html';
+        if (ownerMode) {
+            document.getElementById('login-eyebrow').textContent = 'Store owner';
+            document.getElementById('login-title').textContent = 'Owner sign in';
+            document.getElementById('login-copy').textContent = 'Use the configured owner email to manage the storefront.';
+            document.querySelector('.auth-switch').hidden = true;
+        }
 
         if (getAuthToken()) {
             apiRequest('/me').then((data) => {
@@ -54,7 +62,7 @@
             event.preventDefault();
             loginStatus.textContent = 'Signing you in...';
             try {
-                const data = await apiRequest('/auth/login', {
+                const data = await apiRequest(ownerMode ? '/auth/owner-login' : '/auth/login', {
                     method: 'POST',
                     body: JSON.stringify({
                         email: document.getElementById('login-email').value,

@@ -12,6 +12,7 @@ const paystackSecretKey = (process.env.PAYSTACK_SECRET_KEY || '').trim();
 const frontendOrigin = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
 const paystackCallbackUrl = process.env.PAYSTACK_CALLBACK_URL || `${frontendOrigin}/confirmation.html`;
 const hasUsablePaystackSecret = /^sk_(test|live)_[A-Za-z0-9]+$/.test(paystackSecretKey);
+const configuredOwnerEmail = (process.env.OWNER_EMAIL || '').trim().toLowerCase();
 
 const productSeed = [
     ['vans', 'Vans', 'Classic skate-inspired shoes with a timeless silhouette.', 35000, ['41', '42', '43', '44', '45', '46'], [['Classic', 'Vans.jpeg'], ['Black & White', 'vansblackandwhite.jpeg'], ['All Black', 'vansallblack.jpeg'], ['Blue & Black', 'vansblueandblack.jpeg'], ['Brown', 'vansbrown.jpeg'], ['Green', 'vansgreen.jpeg'], ['Red', 'vansred.jpeg'], ['Red & Black', 'vansredandblack.jpeg']]],
@@ -58,7 +59,7 @@ const requireUser = async (request, response, next) => {
 const requireOwner = async (request, response, next) => {
     request.user = await authUser(request);
     if (!request.user) return response.status(401).json({ error: 'Authentication required.' });
-    if (request.user.role !== 'owner') return response.status(403).json({ error: 'Owner access required.' });
+    if (request.user.role !== 'owner' || !configuredOwnerEmail || request.user.email.toLowerCase() !== configuredOwnerEmail) return response.status(403).json({ error: 'Owner access required.' });
     return next();
 };
 const ensureAccountSettings = async (userId) => {
@@ -111,10 +112,24 @@ app.post('/api/auth/login', async (request, response, next) => {
         const emailQuery = db.client === 'mysql' ? 'SELECT * FROM users WHERE email = ?' : 'SELECT * FROM users WHERE email = ? COLLATE NOCASE';
         const user = await db.get(emailQuery, [email || '']);
         if (!user || !(await bcrypt.compare(password || '', user.password_hash))) return response.status(401).json({ error: 'Invalid email or password.' });
+        if (user.role === 'owner') return response.status(403).json({ error: 'Use the store owner sign-in.' });
         if (await db.get('SELECT 1 FROM sessions WHERE user_id = ? LIMIT 1', [user.id])) return response.status(409).json({ error: 'This account is already logged in. Log out first.' });
         const token = crypto.randomBytes(32).toString('hex');
         await db.run('INSERT INTO sessions (token, user_id) VALUES (?, ?)', [token, user.id]);
         return response.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+    } catch (error) { return next(error); }
+});
+app.post('/api/auth/owner-login', async (request, response, next) => {
+    try {
+        const { email, password } = request.body || {};
+        if (!configuredOwnerEmail || String(email || '').trim().toLowerCase() !== configuredOwnerEmail) return response.status(401).json({ error: 'Use the configured store owner email.' });
+        const emailQuery = db.client === 'mysql' ? 'SELECT * FROM users WHERE email = ?' : 'SELECT * FROM users WHERE email = ? COLLATE NOCASE';
+        const user = await db.get(emailQuery, [configuredOwnerEmail]);
+        if (!user || user.role !== 'owner' || !(await bcrypt.compare(password || '', user.password_hash))) return response.status(401).json({ error: 'Invalid owner email or password.' });
+        if (await db.get('SELECT 1 FROM sessions WHERE user_id = ? LIMIT 1', [user.id])) return response.status(409).json({ error: 'This owner account is already logged in. Log out first.' });
+        const token = crypto.randomBytes(32).toString('hex');
+        await db.run('INSERT INTO sessions (token, user_id) VALUES (?, ?)', [token, user.id]);
+        return response.json({ token, user: { id: user.id, name: user.name, email: user.email, role: 'owner' } });
     } catch (error) { return next(error); }
 });
 app.post('/api/auth/logout', requireUser, async (request, response, next) => { try { await db.run('DELETE FROM sessions WHERE token = ?', [request.get('authorization').replace(/^Bearer\s+/i, '')]); response.status(204).end(); } catch (error) { next(error); } });
@@ -309,10 +324,11 @@ const seedProducts = async () => {
     for (const [id, title, description, price, sizes, options] of productSeed) await db.run(sql, [id, title, description, price, JSON.stringify(sizes), JSON.stringify(options.map(([label, image]) => ({ label, image, price })))]);
 };
 const provisionOwner = async () => {
-    const email = (process.env.OWNER_EMAIL || '').trim().toLowerCase();
+    const email = configuredOwnerEmail;
     const password = process.env.OWNER_PASSWORD || '';
     if (!email || password.length < 6) return;
     const hash = await bcrypt.hash(password, 12);
+    await db.run('UPDATE users SET role = ? WHERE role = ?', ['customer', 'owner']);
     const existing = await db.get('SELECT id FROM users WHERE email = ?', [email]);
     if (existing) await db.run('UPDATE users SET password_hash = ?, role = ? WHERE id = ?', [hash, 'owner', existing.id]);
     else await db.run('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)', ['Store Owner', email, hash, 'owner']);

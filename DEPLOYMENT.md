@@ -57,6 +57,23 @@ The repository's existing data file is SQLite. To migrate that data, export rows
 8. Configure production MySQL credentials only after the MySQL adapter is connected and tested.
 9. Set Paystack webhook URL to `https://YOUR-BACKEND-DOMAIN/api/paystack/webhook`.
 
+Railway variables that must be set on the backend service:
+
+```env
+NODE_ENV=production
+FRONTEND_ORIGIN=https://YOUR-FRONTEND-DOMAIN
+PAYSTACK_CALLBACK_URL=https://YOUR-FRONTEND-DOMAIN/confirmation.html
+PAYSTACK_SECRET_KEY=sk_test_or_sk_live_secret_from_paystack
+DB_CLIENT=mysql
+MYSQL_HOST=YOUR_MYSQL_HOST
+MYSQL_PORT=3306
+MYSQL_DATABASE=YOUR_MYSQL_DATABASE
+MYSQL_USER=YOUR_MYSQL_USER
+MYSQL_PASSWORD=YOUR_MYSQL_PASSWORD
+```
+
+Do not use `localhost` in `FRONTEND_ORIGIN` or `PAYSTACK_CALLBACK_URL` after publishing. Redeploy the Railway service after changing variables. The backend health endpoint should return `paystackConfigured: true`.
+
 ## Vercel frontend
 
 The static HTML frontend can be deployed as a Vercel project with the repository root as the output. `api-client.js` uses same-origin `/api` URLs when served over HTTP, so production needs either a reverse proxy from the frontend origin to the backend or a small production API-base configuration in `api-client.js` pointing at the backend origin. Never put `PAYSTACK_SECRET_KEY` in frontend code.

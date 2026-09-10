@@ -41,7 +41,7 @@
         const formatNaira = (value) => new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(value);
         const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
 
-        const showLogin = () => { window.location.href = 'login.html?next=owner.html'; };
+        const showLogin = () => { window.location.href = 'login.html?owner=1&next=owner.html'; };
         const loadOwner = async () => {
             try {
                 const me = await apiRequest('/me');
