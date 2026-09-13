@@ -72,6 +72,9 @@ SMTP_SECURE=false
 SMTP_USER=your-smtp-username
 SMTP_PASSWORD=your-smtp-password
 SMTP_FROM=arhyXL <noreply@your-domain.com>
+TWILIO_ACCOUNT_SID=your-twilio-account-sid
+TWILIO_AUTH_TOKEN=your-twilio-auth-token
+TWILIO_FROM_NUMBER=+12345678900
 DB_CLIENT=mysql
 MYSQL_HOST=YOUR_MYSQL_HOST
 MYSQL_PORT=3306
@@ -87,6 +90,8 @@ Do not use `localhost` in `FRONTEND_ORIGIN` or `PAYSTACK_CALLBACK_URL` after pub
 The owner profile is created automatically in the database during backend startup. Nobody should sign up as an owner. Railway Variables must include `OWNER_EMAIL` and `OWNER_PASSWORD`; the local `.env` file is ignored by Git and is never copied to Railway. If those two variables are temporarily missing, the storefront still starts, but owner login returns a configuration message until they are added and the service is redeployed.
 
 Email confirmation and password recovery use SMTP. Set all `SMTP_*` variables on Railway to a transactional email provider's SMTP credentials. In production, the backend does not reveal verification or reset links in API responses when SMTP is absent.
+
+Phone confirmation uses Twilio SMS. Set all `TWILIO_*` variables on Railway. `TWILIO_FROM_NUMBER` and the user's destination number must be in E.164 format; the checkout accepts Nigerian local numbers such as `08012345678` and converts them to `+2348012345678` before sending.
 
 The backend accepts Railway's native MySQL variables (`MYSQLHOST`, `MYSQLPORT`, `MYSQLDATABASE`, `MYSQLUSER`, `MYSQLPASSWORD`) as well as the app names (`MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`). The Railway-native names are used automatically when present.
 
