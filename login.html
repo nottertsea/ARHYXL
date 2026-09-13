@@ -35,6 +35,7 @@
                 <p id="login-status" class="form-status" role="status"></p>
             </form>
             <p class="auth-switch">New to arhyXL? <a href="signup.html">Create an account</a></p>
+            <p class="auth-switch"><a href="#" id="forgot-password">Forgot password?</a></p>
             <p class="auth-switch"><a href="owner.html">Store owner login</a></p>
         </section>
     </main>
@@ -75,6 +76,7 @@
                 loginStatus.textContent = error.message;
             }
         });
+        document.getElementById('forgot-password').addEventListener('click', async (event) => { event.preventDefault(); const email = window.prompt('Enter your account email address.'); if (!email) return; loginStatus.textContent = 'Sending reset link...'; try { const data = await apiRequest('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }); loginStatus.textContent = data.message; if (data.resetLink) loginStatus.innerHTML = `Development reset link: <a href="${data.resetLink}">Reset password</a>`; } catch (error) { loginStatus.textContent = error.message; } });
     </script>
 </body>
 </html>

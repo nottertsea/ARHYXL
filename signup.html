@@ -56,7 +56,9 @@
                     })
                 });
                 saveSession(data);
-                window.location.href = 'index.html';
+                signupStatus.textContent = 'Account created. Check your email to confirm it before checkout.';
+                if (data.verificationLink) signupStatus.innerHTML = `Account created. <a href="${data.verificationLink}">Confirm your email</a>`;
+                window.setTimeout(() => { window.location.href = 'account.html'; }, 1000);
             } catch (error) {
                 signupStatus.textContent = error.message;
             }

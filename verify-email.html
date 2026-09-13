@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Confirm Email | arhyXL</title>
+</head>
+<body>
+    <header class="site-header"><a class="brand" href="index.html"><img src="Logo.jpeg" alt="arhyXL Logo"></a><nav class="main-nav"><a href="index.html">Home</a><a href="shop.html">Shop</a></nav></header>
+    <main class="auth-shell"><section class="auth-card"><p class="eyebrow">Email confirmation</p><h1 id="verification-title">Confirming your email...</h1><p id="verification-status" class="page-text"></p><a class="btn btn-primary" href="login.html">Go to login</a></section></main>
+    <script src="api-client.js"></script>
+    <script>
+        const token = new URLSearchParams(window.location.search).get('token');
+        const title = document.getElementById('verification-title');
+        const status = document.getElementById('verification-status');
+        if (!token) { title.textContent = 'Confirmation link missing'; status.textContent = 'Request a new confirmation email from your account.'; } else {
+            apiRequest('/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) }).then(() => { title.textContent = 'Email confirmed'; status.textContent = 'Your account is ready for checkout.'; }).catch((error) => { title.textContent = 'Confirmation unsuccessful'; status.textContent = error.message; });
+        }
+    </script>
+</body>
+</html>

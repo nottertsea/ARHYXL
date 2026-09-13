@@ -66,6 +66,12 @@ NODE_ENV=production
 FRONTEND_ORIGIN=https://YOUR-FRONTEND-DOMAIN
 PAYSTACK_CALLBACK_URL=https://YOUR-FRONTEND-DOMAIN/confirmation.html
 PAYSTACK_SECRET_KEY=sk_test_or_sk_live_secret_from_paystack
+SMTP_HOST=your-smtp-host
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-smtp-username
+SMTP_PASSWORD=your-smtp-password
+SMTP_FROM=arhyXL <noreply@your-domain.com>
 DB_CLIENT=mysql
 MYSQL_HOST=YOUR_MYSQL_HOST
 MYSQL_PORT=3306
@@ -79,6 +85,8 @@ OWNER_PASSWORD=use-a-private-password-at-least-6-characters
 Do not use `localhost` in `FRONTEND_ORIGIN` or `PAYSTACK_CALLBACK_URL` after publishing. Redeploy the Railway service after changing variables. The backend health endpoint should return `paystackConfigured: true` and `ownerConfigured: true`.
 
 The owner profile is created automatically in the database during backend startup. Nobody should sign up as an owner. Railway Variables must include `OWNER_EMAIL` and `OWNER_PASSWORD`; the local `.env` file is ignored by Git and is never copied to Railway. If those two variables are temporarily missing, the storefront still starts, but owner login returns a configuration message until they are added and the service is redeployed.
+
+Email confirmation and password recovery use SMTP. Set all `SMTP_*` variables on Railway to a transactional email provider's SMTP credentials. In production, the backend does not reveal verification or reset links in API responses when SMTP is absent.
 
 The backend accepts Railway's native MySQL variables (`MYSQLHOST`, `MYSQLPORT`, `MYSQLDATABASE`, `MYSQLUSER`, `MYSQLPASSWORD`) as well as the app names (`MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`). The Railway-native names are used automatically when present.
 

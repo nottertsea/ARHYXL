@@ -3,6 +3,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const nodemailer = require('nodemailer');
 const db = require('./db');
 
 const app = express();
@@ -15,6 +16,8 @@ const hasUsablePaystackSecret = /^sk_(test|live)_[A-Za-z0-9]+$/.test(paystackSec
 const configuredOwnerEmail = (process.env.OWNER_EMAIL || '').trim().toLowerCase();
 const ownerPassword = process.env.OWNER_PASSWORD || '';
 const hasConfiguredOwner = /^\S+@\S+\.\S+$/.test(configuredOwnerEmail) && ownerPassword.length >= 6;
+const smtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_USER && process.env.SMTP_PASSWORD && process.env.SMTP_FROM);
+const mailer = smtpConfigured ? nodemailer.createTransport({ host: process.env.SMTP_HOST, port: Number(process.env.SMTP_PORT), secure: process.env.SMTP_SECURE === 'true', auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD } }) : null;
 
 const productSeed = [
     ['vans', 'Vans', 'Classic skate-inspired shoes with a timeless silhouette.', 35000, ['41', '42', '43', '44', '45', '46'], [['Classic', 'Vans.jpeg'], ['Black & White', 'vansblackandwhite.jpeg'], ['All Black', 'vansallblack.jpeg'], ['Blue & Black', 'vansblueandblack.jpeg'], ['Brown', 'vansbrown.jpeg'], ['Green', 'vansgreen.jpeg'], ['Red', 'vansred.jpeg'], ['Red & Black', 'vansredandblack.jpeg']]],
@@ -49,9 +52,25 @@ const publicProduct = (row) => {
 const adminProduct = (row) => ({ ...publicProduct(row), stock: productOptions(row).reduce((total, option) => total + option.stock, 0), options: productOptions(row) });
 const activePrice = (product) => Math.round(Number(product.price) * (100 - Number(product.discount_percent || 0)) / 100);
 const validText = (value, max) => typeof value === 'string' && value.trim().length > 0 && value.length <= max;
+const tokenHash = (token) => crypto.createHash('sha256').update(token).digest('hex');
+const tokenExpiry = () => new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
+const createAuthToken = async (userId, purpose) => {
+    const token = crypto.randomBytes(32).toString('hex');
+    await db.run('DELETE FROM auth_tokens WHERE user_id = ? AND purpose = ?', [userId, purpose]);
+    await db.run('INSERT INTO auth_tokens (token_hash, user_id, purpose, expires_at) VALUES (?, ?, ?, ?)', [tokenHash(token), userId, purpose, tokenExpiry()]);
+    return token;
+};
+const sendAccountEmail = async (email, purpose, token) => {
+    const page = purpose === 'verify_email' ? 'verify-email.html' : 'reset-password.html';
+    const subject = purpose === 'verify_email' ? 'Confirm your arhyXL email' : 'Reset your arhyXL password';
+    const link = `${frontendOrigin}/${page}?token=${encodeURIComponent(token)}`;
+    if (mailer) await mailer.sendMail({ from: process.env.SMTP_FROM, to: email, subject, text: `${subject}: ${link}` });
+    else if (process.env.NODE_ENV === 'production') throw new Error('Email delivery is not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, and SMTP_FROM.');
+    return link;
+};
 const authUser = async (request) => {
     const token = request.get('authorization')?.replace(/^Bearer\s+/i, '');
-    return token ? db.get('SELECT users.id, users.name, users.email, users.role FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.token = ?', [token]) : null;
+    return token ? db.get('SELECT users.id, users.name, users.email, users.role, users.email_verified FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.token = ?', [token]) : null;
 };
 const requireUser = async (request, response, next) => {
     request.user = await authUser(request);
@@ -98,7 +117,7 @@ app.use((request, response, next) => {
 app.use((request, response, next) => /^\/(?:arhyxl\.sqlite|schema\.sql|mysql-schema\.sql|server\.js|db\.js|package(?:-lock)?\.json|node_modules)(?:\/|$)/.test(request.path) ? response.sendStatus(404) : next());
 app.use(express.static(__dirname));
 
-app.get('/api/health', (request, response) => response.json({ ok: true, database: db.client, paystackConfigured: hasUsablePaystackSecret, ownerConfigured: hasConfiguredOwner }));
+app.get('/api/health', (request, response) => response.json({ ok: true, database: db.client, paystackConfigured: hasUsablePaystackSecret, ownerConfigured: hasConfiguredOwner, emailConfigured: smtpConfigured }));
 app.get('/api/products', async (request, response, next) => { try { response.json((await db.all('SELECT * FROM products ORDER BY title')).map(publicProduct)); } catch (error) { next(error); } });
 app.get('/api/products/:id', async (request, response, next) => { try { const product = await db.get('SELECT * FROM products WHERE id = ?', [request.params.id]); if (!product) return response.status(404).json({ error: 'Product not found.' }); return response.json(publicProduct(product)); } catch (error) { next(error); } });
 
@@ -110,7 +129,9 @@ app.post('/api/auth/signup', async (request, response, next) => {
         const result = await db.run('INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)', [name.trim(), email.trim().toLowerCase(), passwordHash]);
         const token = crypto.randomBytes(32).toString('hex');
         await db.run('INSERT INTO sessions (token, user_id) VALUES (?, ?)', [token, result.lastInsertRowid]);
-        return response.status(201).json({ token, user: { id: result.lastInsertRowid, name: name.trim(), email: email.trim().toLowerCase() } });
+        const verificationToken = await createAuthToken(result.lastInsertRowid, 'verify_email');
+        const verificationLink = await sendAccountEmail(email.trim().toLowerCase(), 'verify_email', verificationToken);
+        return response.status(201).json({ token, user: { id: result.lastInsertRowid, name: name.trim(), email: email.trim().toLowerCase(), emailVerified: false }, ...(mailer ? {} : { verificationLink }) });
     } catch (error) { if (error.code === 'SQLITE_CONSTRAINT_UNIQUE' || error.code === 'ER_DUP_ENTRY') return response.status(409).json({ error: 'An account with that email already exists.' }); return next(error); }
 });
 app.post('/api/auth/login', async (request, response, next) => {
@@ -122,9 +143,13 @@ app.post('/api/auth/login', async (request, response, next) => {
         if (user.role === 'owner') return response.status(403).json({ error: 'Use the store owner sign-in.' });
         const token = crypto.randomBytes(32).toString('hex');
         await db.run('INSERT INTO sessions (token, user_id) VALUES (?, ?)', [token, user.id]);
-        return response.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+        return response.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, emailVerified: Boolean(user.email_verified) } });
     } catch (error) { return next(error); }
 });
+app.post('/api/auth/verify-email', async (request, response, next) => { try { const token = String(request.body?.token || ''); const record = await db.get('SELECT * FROM auth_tokens WHERE token_hash = ? AND purpose = ? AND expires_at > CURRENT_TIMESTAMP', [tokenHash(token), 'verify_email']); if (!record) return response.status(400).json({ error: 'This email confirmation link is invalid or expired.' }); await db.transaction(async (tx) => { await tx.run('UPDATE users SET email_verified = ? WHERE id = ?', [1, record.user_id]); await tx.run('DELETE FROM auth_tokens WHERE token_hash = ?', [tokenHash(token)]); }); response.json({ message: 'Email confirmed.' }); } catch (error) { next(error); } });
+app.post('/api/auth/resend-verification', requireUser, async (request, response, next) => { try { const user = await db.get('SELECT * FROM users WHERE id = ?', [request.user.id]); if (user.email_verified) return response.json({ message: 'Email is already confirmed.' }); const token = await createAuthToken(user.id, 'verify_email'); const verificationLink = await sendAccountEmail(user.email, 'verify_email', token); response.json({ message: 'Confirmation email sent.', ...(mailer ? {} : { verificationLink }) }); } catch (error) { next(error); } });
+app.post('/api/auth/forgot-password', async (request, response, next) => { try { const email = String(request.body?.email || '').trim().toLowerCase(); const user = await db.get(db.client === 'mysql' ? 'SELECT * FROM users WHERE email = ?' : 'SELECT * FROM users WHERE email = ? COLLATE NOCASE', [email]); if (!user) return response.json({ message: 'If that email exists, a reset link has been sent.' }); const token = await createAuthToken(user.id, 'reset_password'); const resetLink = await sendAccountEmail(user.email, 'reset_password', token); response.json({ message: 'If that email exists, a reset link has been sent.', ...(mailer ? {} : { resetLink }) }); } catch (error) { next(error); } });
+app.post('/api/auth/reset-password', async (request, response, next) => { try { const token = String(request.body?.token || ''); const password = request.body?.password; if (typeof password !== 'string' || password.length < 6) return response.status(400).json({ error: 'Use a password of at least 6 characters.' }); const record = await db.get('SELECT * FROM auth_tokens WHERE token_hash = ? AND purpose = ? AND expires_at > CURRENT_TIMESTAMP', [tokenHash(token), 'reset_password']); if (!record) return response.status(400).json({ error: 'This password reset link is invalid or expired.' }); await db.transaction(async (tx) => { await tx.run('UPDATE users SET password_hash = ? WHERE id = ?', [await bcrypt.hash(password, 12), record.user_id]); await tx.run('DELETE FROM auth_tokens WHERE user_id = ? AND purpose = ?', [record.user_id, 'reset_password']); await tx.run('DELETE FROM sessions WHERE user_id = ?', [record.user_id]); }); response.json({ message: 'Password reset. Log in with your new password.' }); } catch (error) { next(error); } });
 app.post('/api/auth/owner-login', async (request, response, next) => {
     try {
         const { email, password } = request.body || {};
@@ -279,6 +304,7 @@ app.post('/api/orders/initialize', requireUser, async (request, response, next) 
     try {
         const { name, email, phone, address, itemIds, idempotencyKey } = request.body || {};
         if (!validText(name, 150) || !/^\S+@\S+\.\S+$/.test(email || '') || !validText(phone, 40) || !validText(address, 2000) || !Array.isArray(itemIds) || !itemIds.length || !validText(idempotencyKey, 120)) return response.status(400).json({ error: 'Customer and delivery details plus cart items are required.' });
+        if (!request.user.email_verified) return response.status(403).json({ error: 'Confirm your email before checkout. Check your inbox for the confirmation link.' });
         const prior = await db.get('SELECT * FROM orders WHERE user_id = ? AND idempotency_key = ?', [request.user.id, idempotencyKey]);
         if (prior?.paystack_reference && prior.authorization_url) return response.json({ orderReference: prior.order_reference, amountKobo: prior.amount_kobo, authorizationUrl: prior.authorization_url, message: 'This checkout attempt already exists.' });
         const ids = itemIds.map(Number).filter(Number.isInteger);
@@ -287,6 +313,11 @@ app.post('/api/orders/initialize', requireUser, async (request, response, next) 
         if (items.length !== ids.length) return response.status(400).json({ error: 'One or more cart items are no longer available.' });
         if (items.some((item) => item.quantity > (productOptions(item).find((option) => option.image === item.variant)?.stock || 0))) return response.status(409).json({ error: 'One or more items exceed the available stock. Update your cart and try again.' });
         const amountKobo = items.reduce((total, item) => total + activePrice(item) * item.quantity * 100, 0);
+        const savedAddress = await db.get('SELECT id FROM addresses WHERE user_id = ? AND address_line = ?', [request.user.id, address.trim()]);
+        if (!savedAddress) {
+            await db.run('UPDATE addresses SET is_default = 0 WHERE user_id = ?', [request.user.id]);
+            await db.run('INSERT INTO addresses (user_id, label, recipient_name, phone, address_line, city, state, is_default) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [request.user.id, 'Checkout address', name.trim(), phone.trim(), address.trim(), 'Not specified', 'Not specified', 1]);
+        }
         if (prior) {
             if (Number(prior.amount_kobo) !== amountKobo) return response.status(409).json({ error: 'This checkout attempt does not match the current cart.' });
             orderReference = prior.order_reference;
@@ -365,8 +396,8 @@ const provisionOwner = async () => {
     const hash = await bcrypt.hash(ownerPassword, 12);
     await db.run('UPDATE users SET role = ? WHERE role = ?', ['customer', 'owner']);
     const existing = await db.get('SELECT id FROM users WHERE email = ?', [email]);
-    if (existing) await db.run('UPDATE users SET password_hash = ?, role = ? WHERE id = ?', [hash, 'owner', existing.id]);
-    else await db.run('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)', ['Store Owner', email, hash, 'owner']);
+    if (existing) await db.run('UPDATE users SET password_hash = ?, role = ?, email_verified = ? WHERE id = ?', [hash, 'owner', 1, existing.id]);
+    else await db.run('INSERT INTO users (name, email, password_hash, role, email_verified) VALUES (?, ?, ?, ?, ?)', ['Store Owner', email, hash, 'owner', 1]);
 };
 const start = async () => {
     await db.init();

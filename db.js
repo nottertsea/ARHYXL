@@ -83,6 +83,7 @@ const db = {
 async function migrateSqlite() {
     const userColumns = await sqliteAll('PRAGMA table_info(users)');
     if (!userColumns.some((column) => column.name === 'role')) await sqliteRun("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'customer'");
+    if (!userColumns.some((column) => column.name === 'email_verified')) await sqliteRun('ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0');
     const productColumns = await sqliteAll('PRAGMA table_info(products)');
     if (!productColumns.some((column) => column.name === 'stock')) await sqliteRun('ALTER TABLE products ADD COLUMN stock INTEGER NOT NULL DEFAULT 0');
     if (!productColumns.some((column) => column.name === 'discount_percent')) await sqliteRun('ALTER TABLE products ADD COLUMN discount_percent INTEGER NOT NULL DEFAULT 0');
@@ -101,6 +102,7 @@ async function migrateSqlite() {
 async function migrateMysql(connection) {
     const additions = [
         "ALTER TABLE users ADD COLUMN role ENUM('customer', 'owner') NOT NULL DEFAULT 'customer'",
+        'ALTER TABLE users ADD COLUMN email_verified BOOLEAN NOT NULL DEFAULT FALSE',
         'ALTER TABLE products ADD COLUMN stock INT UNSIGNED NOT NULL DEFAULT 0',
         'ALTER TABLE products ADD COLUMN discount_percent TINYINT UNSIGNED NOT NULL DEFAULT 0'
     ];
