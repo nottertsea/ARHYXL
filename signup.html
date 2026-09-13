@@ -57,8 +57,8 @@
                 });
                 saveSession(data);
                 signupStatus.textContent = 'Account created. Check your email to confirm it before checkout.';
-                if (data.verificationLink) signupStatus.innerHTML = `Account created. <a href="${data.verificationLink}">Confirm your email</a>`;
-                window.setTimeout(() => { window.location.href = 'account.html'; }, 1000);
+                if (data.verificationCode) signupStatus.textContent = `Development confirmation code: ${data.verificationCode}`;
+                window.setTimeout(() => { window.location.href = 'verify-email.html'; }, 1000);
             } catch (error) {
                 signupStatus.textContent = error.message;
             }

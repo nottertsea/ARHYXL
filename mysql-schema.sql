@@ -6,13 +6,16 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     role ENUM('customer', 'owner') NOT NULL DEFAULT 'customer',
     email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    phone_verified VARCHAR(40),
+    phone_verified_at TIMESTAMP NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS auth_tokens (
     token_hash CHAR(64) NOT NULL PRIMARY KEY,
     user_id BIGINT UNSIGNED NOT NULL,
-    purpose ENUM('verify_email', 'reset_password') NOT NULL,
+    purpose ENUM('verify_email', 'verify_phone', 'reset_password') NOT NULL,
+    target VARCHAR(255),
     expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_auth_tokens_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

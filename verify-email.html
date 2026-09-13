@@ -8,15 +8,11 @@
 </head>
 <body>
     <header class="site-header"><a class="brand" href="index.html"><img src="Logo.jpeg" alt="arhyXL Logo"></a><nav class="main-nav"><a href="index.html">Home</a><a href="shop.html">Shop</a></nav></header>
-    <main class="auth-shell"><section class="auth-card"><p class="eyebrow">Email confirmation</p><h1 id="verification-title">Confirming your email...</h1><p id="verification-status" class="page-text"></p><a class="btn btn-primary" href="login.html">Go to login</a></section></main>
+    <main class="auth-shell"><section class="auth-card"><p class="eyebrow">Email confirmation</p><h1>Confirm your email</h1><p class="page-text">Enter the six-digit code sent to your email address.</p><form id="verification-form" class="auth-form"><label for="verification-code">Confirmation code</label><input id="verification-code" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" required><button class="btn btn-primary">Confirm email</button><p id="verification-status" class="form-status" role="status"></p></form></section></main>
     <script src="api-client.js"></script>
     <script>
-        const token = new URLSearchParams(window.location.search).get('token');
-        const title = document.getElementById('verification-title');
         const status = document.getElementById('verification-status');
-        if (!token) { title.textContent = 'Confirmation link missing'; status.textContent = 'Request a new confirmation email from your account.'; } else {
-            apiRequest('/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) }).then(() => { title.textContent = 'Email confirmed'; status.textContent = 'Your account is ready for checkout.'; }).catch((error) => { title.textContent = 'Confirmation unsuccessful'; status.textContent = error.message; });
-        }
+        document.getElementById('verification-form').addEventListener('submit', async (event) => { event.preventDefault(); try { await apiRequest('/auth/verify-email', { method: 'POST', body: JSON.stringify({ code: document.getElementById('verification-code').value }) }); status.textContent = 'Email confirmed. Your account is ready for checkout.'; } catch (error) { status.textContent = error.message; } });
     </script>
 </body>
 </html>

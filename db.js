@@ -84,6 +84,14 @@ async function migrateSqlite() {
     const userColumns = await sqliteAll('PRAGMA table_info(users)');
     if (!userColumns.some((column) => column.name === 'role')) await sqliteRun("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'customer'");
     if (!userColumns.some((column) => column.name === 'email_verified')) await sqliteRun('ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0');
+    if (!userColumns.some((column) => column.name === 'phone_verified')) await sqliteRun('ALTER TABLE users ADD COLUMN phone_verified TEXT');
+    if (!userColumns.some((column) => column.name === 'phone_verified_at')) await sqliteRun('ALTER TABLE users ADD COLUMN phone_verified_at TEXT');
+    const tokenColumns = await sqliteAll('PRAGMA table_info(auth_tokens)');
+    if (tokenColumns.length && !tokenColumns.some((column) => column.name === 'target')) await sqliteRun('ALTER TABLE auth_tokens ADD COLUMN target TEXT');
+    const tokenSchema = await sqliteGet("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'auth_tokens'");
+    if (tokenSchema?.sql && !tokenSchema.sql.includes('verify_phone')) {
+        await sqliteExec('ALTER TABLE auth_tokens RENAME TO auth_tokens_legacy; CREATE TABLE auth_tokens (token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, purpose TEXT NOT NULL CHECK (purpose IN (\'verify_email\', \'verify_phone\', \'reset_password\')), target TEXT, expires_at TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); INSERT INTO auth_tokens (token_hash, user_id, purpose, target, expires_at, created_at) SELECT token_hash, user_id, purpose, target, expires_at, created_at FROM auth_tokens_legacy; DROP TABLE auth_tokens_legacy');
+    }
     const productColumns = await sqliteAll('PRAGMA table_info(products)');
     if (!productColumns.some((column) => column.name === 'stock')) await sqliteRun('ALTER TABLE products ADD COLUMN stock INTEGER NOT NULL DEFAULT 0');
     if (!productColumns.some((column) => column.name === 'discount_percent')) await sqliteRun('ALTER TABLE products ADD COLUMN discount_percent INTEGER NOT NULL DEFAULT 0');
@@ -103,12 +111,16 @@ async function migrateMysql(connection) {
     const additions = [
         "ALTER TABLE users ADD COLUMN role ENUM('customer', 'owner') NOT NULL DEFAULT 'customer'",
         'ALTER TABLE users ADD COLUMN email_verified BOOLEAN NOT NULL DEFAULT FALSE',
+        'ALTER TABLE users ADD COLUMN phone_verified VARCHAR(40)',
+        'ALTER TABLE users ADD COLUMN phone_verified_at TIMESTAMP NULL',
         'ALTER TABLE products ADD COLUMN stock INT UNSIGNED NOT NULL DEFAULT 0',
         'ALTER TABLE products ADD COLUMN discount_percent TINYINT UNSIGNED NOT NULL DEFAULT 0'
     ];
     for (const statement of additions) {
         try { await connection.query(statement); } catch (error) { if (error.code !== 'ER_DUP_FIELDNAME') throw error; }
     }
+    try { await connection.query('ALTER TABLE auth_tokens ADD COLUMN target VARCHAR(255)'); } catch (error) { if (error.code !== 'ER_DUP_FIELDNAME') throw error; }
+    try { await connection.query("ALTER TABLE auth_tokens MODIFY purpose ENUM('verify_email', 'verify_phone', 'reset_password') NOT NULL"); } catch (error) { if (error.code !== 'ER_DUP_FIELD') throw error; }
     try { await connection.query("ALTER TABLE orders MODIFY status ENUM('pending', 'paid', 'processing', 'shipped', 'delivered', 'returned', 'failed', 'cancelled', 'abandoned') NOT NULL DEFAULT 'pending'"); } catch (error) { if (error.code !== 'ER_DUP_FIELD') throw error; }
 }
 
