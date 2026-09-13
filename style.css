@@ -1031,6 +1031,10 @@ img {
     color: #477044;
 }
 
+.form-status.form-error {
+    color: #a12a2a;
+}
+
 .assistant-heading {
     display: flex;
     align-items: flex-start;
