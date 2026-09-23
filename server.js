@@ -16,9 +16,13 @@ const hasUsablePaystackSecret = /^sk_(test|live)_[A-Za-z0-9]+$/.test(paystackSec
 const configuredOwnerEmail = (process.env.OWNER_EMAIL || '').trim().toLowerCase();
 const ownerPassword = process.env.OWNER_PASSWORD || '';
 const hasConfiguredOwner = /^\S+@\S+\.\S+$/.test(configuredOwnerEmail) && ownerPassword.length >= 6;
-const smtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_USER && process.env.SMTP_PASSWORD && process.env.SMTP_FROM);
-const mailer = smtpConfigured ? nodemailer.createTransport({ host: process.env.SMTP_HOST, port: Number(process.env.SMTP_PORT), secure: process.env.SMTP_SECURE === 'true', auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD } }) : null;
-const smsConfigured = Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_NUMBER);
+const gmailConfigured = Boolean(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD);
+const genericSmtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_USER && process.env.SMTP_PASSWORD);
+const gmailTransport = gmailConfigured ? { transport: nodemailer.createTransport({ host: 'smtp.gmail.com', port: 465, secure: true, auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD } }), from: process.env.GMAIL_FROM || process.env.GMAIL_USER } : null;
+const genericTransport = genericSmtpConfigured ? { transport: nodemailer.createTransport({ host: process.env.SMTP_HOST, port: Number(process.env.SMTP_PORT), secure: process.env.SMTP_SECURE === 'true', auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD } }), from: process.env.SMTP_FROM || process.env.SMTP_USER } : null;
+// Generic SMTP acts as a fallback if Gmail isn't configured or fails.
+const mailTransports = [gmailTransport, genericTransport].filter(Boolean);
+const smtpConfigured = mailTransports.length > 0;
 
 const productSeed = [
     ['vans', 'Vans', 'Classic skate-inspired shoes with a timeless silhouette.', 35000, ['41', '42', '43', '44', '45', '46'], [['Classic', 'Vans.jpeg'], ['Black & White', 'vansblackandwhite.jpeg'], ['All Black', 'vansallblack.jpeg'], ['Blue & Black', 'vansblueandblack.jpeg'], ['Brown', 'vansbrown.jpeg'], ['Green', 'vansgreen.jpeg'], ['Red', 'vansred.jpeg'], ['Red & Black', 'vansredandblack.jpeg']]],
@@ -62,7 +66,7 @@ const normalizePhone = (value) => {
 const tokenHash = (token) => crypto.createHash('sha256').update(token).digest('hex');
 const tokenExpiry = () => new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
 const createAuthToken = async (userId, purpose, target = null) => {
-    const token = purpose === 'verify_email' || purpose === 'verify_phone' ? String(crypto.randomInt(100000, 1000000)) : crypto.randomBytes(32).toString('hex');
+    const token = purpose === 'verify_email' ? String(crypto.randomInt(100000, 1000000)) : crypto.randomBytes(32).toString('hex');
     await db.run('DELETE FROM auth_tokens WHERE user_id = ? AND purpose = ?', [userId, purpose]);
     await db.run('INSERT INTO auth_tokens (token_hash, user_id, purpose, target, expires_at) VALUES (?, ?, ?, ?, ?)', [tokenHash(token), userId, purpose, target, tokenExpiry()]);
     return token;
@@ -73,17 +77,15 @@ const sendAccountEmail = async (email, purpose, token) => {
     const subject = isVerification ? 'Your arhyXL email confirmation code' : 'Reset your arhyXL password';
     const link = `${frontendOrigin}/${page}?${isVerification ? '' : `token=${encodeURIComponent(token)}`}`;
     const text = isVerification ? `Your arhyXL confirmation code is ${token}. It expires in one hour.` : `${subject}: ${link}`;
-    if (mailer) await mailer.sendMail({ from: process.env.SMTP_FROM, to: email, subject, text });
-    else if (process.env.NODE_ENV === 'production') throw new Error('Email delivery is not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, and SMTP_FROM.');
+    if (mailTransports.length) {
+        let lastError = null;
+        for (const { transport, from } of mailTransports) {
+            try { await transport.sendMail({ from, to: email, subject, text }); lastError = null; break; }
+            catch (error) { lastError = error; }
+        }
+        if (lastError) throw new Error('Unable to send email. Check GMAIL_*/SMTP_* credentials.');
+    } else if (process.env.NODE_ENV === 'production') throw new Error('Email delivery is not configured. Set GMAIL_USER/GMAIL_APP_PASSWORD (or SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASSWORD).');
     return isVerification ? token : link;
-};
-const sendPhoneCode = async (phone, code) => {
-    if (smsConfigured) {
-        const auth = Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64');
-        const body = new URLSearchParams({ To: phone, From: process.env.TWILIO_FROM_NUMBER, Body: `Your arhyXL verification code is ${code}. It expires in one hour.` });
-        const result = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`, { method: 'POST', headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' }, body });
-        if (!result.ok) throw new Error('Unable to send phone verification code.');
-    } else if (process.env.NODE_ENV === 'production') throw new Error('SMS delivery is not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM_NUMBER.');
 };
 const authUser = async (request) => {
     const token = request.get('authorization')?.replace(/^Bearer\s+/i, '');
@@ -134,7 +136,7 @@ app.use((request, response, next) => {
 app.use((request, response, next) => /^\/(?:arhyxl\.sqlite|schema\.sql|mysql-schema\.sql|server\.js|db\.js|package(?:-lock)?\.json|node_modules)(?:\/|$)/.test(request.path) ? response.sendStatus(404) : next());
 app.use(express.static(__dirname));
 
-app.get('/api/health', (request, response) => response.json({ ok: true, database: db.client, paystackConfigured: hasUsablePaystackSecret, ownerConfigured: hasConfiguredOwner, emailConfigured: smtpConfigured, smsConfigured }));
+app.get('/api/health', (request, response) => response.json({ ok: true, database: db.client, paystackConfigured: hasUsablePaystackSecret, ownerConfigured: hasConfiguredOwner, emailConfigured: smtpConfigured }));
 app.get('/api/products', async (request, response, next) => { try { response.json((await db.all('SELECT * FROM products ORDER BY title')).map(publicProduct)); } catch (error) { next(error); } });
 app.get('/api/products/:id', async (request, response, next) => { try { const product = await db.get('SELECT * FROM products WHERE id = ?', [request.params.id]); if (!product) return response.status(404).json({ error: 'Product not found.' }); return response.json(publicProduct(product)); } catch (error) { next(error); } });
 
@@ -148,7 +150,7 @@ app.post('/api/auth/signup', async (request, response, next) => {
         await db.run('INSERT INTO sessions (token, user_id) VALUES (?, ?)', [token, result.lastInsertRowid]);
         const verificationCode = await createAuthToken(result.lastInsertRowid, 'verify_email', email.trim().toLowerCase());
         const developmentCode = await sendAccountEmail(email.trim().toLowerCase(), 'verify_email', verificationCode);
-        return response.status(201).json({ token, user: { id: result.lastInsertRowid, name: name.trim(), email: email.trim().toLowerCase(), emailVerified: false }, ...(mailer ? {} : { verificationCode: developmentCode }) });
+        return response.status(201).json({ token, user: { id: result.lastInsertRowid, name: name.trim(), email: email.trim().toLowerCase(), emailVerified: false }, ...(smtpConfigured ? {} : { verificationCode: developmentCode }) });
     } catch (error) { if (error.code === 'SQLITE_CONSTRAINT_UNIQUE' || error.code === 'ER_DUP_ENTRY') return response.status(409).json({ error: 'An account with that email already exists.' }); return next(error); }
 });
 app.post('/api/auth/login', async (request, response, next) => {
@@ -164,10 +166,8 @@ app.post('/api/auth/login', async (request, response, next) => {
     } catch (error) { return next(error); }
 });
 app.post('/api/auth/verify-email', requireUser, async (request, response, next) => { try { const code = String(request.body?.code || ''); const record = await db.get('SELECT * FROM auth_tokens WHERE token_hash = ? AND user_id = ? AND purpose = ? AND expires_at > CURRENT_TIMESTAMP', [tokenHash(code), request.user.id, 'verify_email']); if (!record) return response.status(400).json({ error: 'This email confirmation code is invalid or expired.' }); await db.transaction(async (tx) => { await tx.run('UPDATE users SET email_verified = ? WHERE id = ?', [1, record.user_id]); await tx.run('DELETE FROM auth_tokens WHERE token_hash = ?', [tokenHash(code)]); }); response.json({ message: 'Email confirmed.' }); } catch (error) { next(error); } });
-app.post('/api/auth/resend-verification', requireUser, async (request, response, next) => { try { const user = await db.get('SELECT * FROM users WHERE id = ?', [request.user.id]); if (user.email_verified) return response.json({ message: 'Email is already confirmed.' }); const code = await createAuthToken(user.id, 'verify_email', user.email); const developmentCode = await sendAccountEmail(user.email, 'verify_email', code); response.json({ message: 'Confirmation code sent.', ...(mailer ? {} : { verificationCode: developmentCode }) }); } catch (error) { next(error); } });
-app.post('/api/auth/send-phone-verification', requireUser, async (request, response, next) => { try { const phone = normalizePhone(request.body?.phone); if (!phone) return response.status(400).json({ error: 'Enter a valid mobile number, for example 08012345678 or +2348012345678.' }); const code = await createAuthToken(request.user.id, 'verify_phone', phone); await sendPhoneCode(phone, code); response.json({ message: 'Phone verification code sent.', phone, ...(smsConfigured ? {} : { verificationCode: code }) }); } catch (error) { next(error); } });
-app.post('/api/auth/verify-phone', requireUser, async (request, response, next) => { try { const phone = normalizePhone(request.body?.phone); const code = String(request.body?.code || ''); if (!phone) return response.status(400).json({ error: 'Enter a valid mobile number.' }); const record = await db.get('SELECT * FROM auth_tokens WHERE token_hash = ? AND user_id = ? AND purpose = ? AND target = ? AND expires_at > CURRENT_TIMESTAMP', [tokenHash(code), request.user.id, 'verify_phone', phone]); if (!record) return response.status(400).json({ error: 'This phone confirmation code is invalid or expired.' }); await db.transaction(async (tx) => { await tx.run('UPDATE users SET phone_verified = ?, phone_verified_at = CURRENT_TIMESTAMP WHERE id = ?', [phone, request.user.id]); await tx.run('DELETE FROM auth_tokens WHERE token_hash = ?', [tokenHash(code)]); }); response.json({ message: 'Phone number confirmed.' }); } catch (error) { next(error); } });
-app.post('/api/auth/forgot-password', async (request, response, next) => { try { const email = String(request.body?.email || '').trim().toLowerCase(); const user = await db.get(db.client === 'mysql' ? 'SELECT * FROM users WHERE email = ?' : 'SELECT * FROM users WHERE email = ? COLLATE NOCASE', [email]); if (!user) return response.json({ message: 'If that email exists, a reset link has been sent.' }); const token = await createAuthToken(user.id, 'reset_password'); const resetLink = await sendAccountEmail(user.email, 'reset_password', token); response.json({ message: 'If that email exists, a reset link has been sent.', ...(mailer ? {} : { resetLink }) }); } catch (error) { next(error); } });
+app.post('/api/auth/resend-verification', requireUser, async (request, response, next) => { try { const user = await db.get('SELECT * FROM users WHERE id = ?', [request.user.id]); if (user.email_verified) return response.json({ message: 'Email is already confirmed.' }); const code = await createAuthToken(user.id, 'verify_email', user.email); const developmentCode = await sendAccountEmail(user.email, 'verify_email', code); response.json({ message: 'Confirmation code sent.', ...(smtpConfigured ? {} : { verificationCode: developmentCode }) }); } catch (error) { next(error); } });
+app.post('/api/auth/forgot-password', async (request, response, next) => { try { const email = String(request.body?.email || '').trim().toLowerCase(); const user = await db.get(db.client === 'mysql' ? 'SELECT * FROM users WHERE email = ?' : 'SELECT * FROM users WHERE email = ? COLLATE NOCASE', [email]); if (!user) return response.json({ message: 'If that email exists, a reset link has been sent.' }); const token = await createAuthToken(user.id, 'reset_password'); const resetLink = await sendAccountEmail(user.email, 'reset_password', token); response.json({ message: 'If that email exists, a reset link has been sent.', ...(smtpConfigured ? {} : { resetLink }) }); } catch (error) { next(error); } });
 app.post('/api/auth/reset-password', async (request, response, next) => { try { const token = String(request.body?.token || ''); const password = request.body?.password; if (typeof password !== 'string' || password.length < 6) return response.status(400).json({ error: 'Use a password of at least 6 characters.' }); const record = await db.get('SELECT * FROM auth_tokens WHERE token_hash = ? AND purpose = ? AND expires_at > CURRENT_TIMESTAMP', [tokenHash(token), 'reset_password']); if (!record) return response.status(400).json({ error: 'This password reset link is invalid or expired.' }); await db.transaction(async (tx) => { await tx.run('UPDATE users SET password_hash = ? WHERE id = ?', [await bcrypt.hash(password, 12), record.user_id]); await tx.run('DELETE FROM auth_tokens WHERE user_id = ? AND purpose = ?', [record.user_id, 'reset_password']); await tx.run('DELETE FROM sessions WHERE user_id = ?', [record.user_id]); }); response.json({ message: 'Password reset. Log in with your new password.' }); } catch (error) { next(error); } });
 app.post('/api/auth/owner-login', async (request, response, next) => {
     try {
@@ -326,7 +326,6 @@ app.post('/api/orders/initialize', requireUser, async (request, response, next) 
         const normalizedPhone = normalizePhone(phone);
         if (!normalizedPhone) return response.status(400).json({ error: 'Enter a valid mobile number before checkout.' });
         if (!request.user.email_verified) return response.status(403).json({ error: 'Confirm your email before checkout.' });
-        if (request.user.phone_verified !== normalizedPhone) return response.status(403).json({ error: 'Confirm this phone number before checkout.' });
         const prior = await db.get('SELECT * FROM orders WHERE user_id = ? AND idempotency_key = ?', [request.user.id, idempotencyKey]);
         if (prior?.paystack_reference && prior.authorization_url) return response.json({ orderReference: prior.order_reference, amountKobo: prior.amount_kobo, authorizationUrl: prior.authorization_url, message: 'This checkout attempt already exists.' });
         const ids = itemIds.map(Number).filter(Number.isInteger);
